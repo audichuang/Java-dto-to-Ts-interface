@@ -225,23 +225,17 @@ public class JavaBeanToTypescriptInterfaceAction extends AnAction {
                 } else {
                     // 在文本區域顯示編輯
                     if (interfaceContent != null && !interfaceContent.trim().isEmpty()) {
-                        // 添加標記以便識別內容
-                        final String markedContent = "// Generated on: " + java.time.LocalDateTime.now() + "\n" +
-                                "// Method: JavaBeanToTypescriptInterfaceAction\n" +
-                                "// Content length: " + interfaceContent.length() + " characters\n\n" +
-                                interfaceContent;
+                        // 保持原始內容格式，不添加標記
+                        final String finalContent = interfaceContent;
 
                         // 使用獨立的線程安全方式顯示
                         SwingUtilities.invokeLater(() -> {
                             try {
                                 TypescriptInterfaceShowerWrapper typescriptInterfaceShowerWrapper = new TypescriptInterfaceShowerWrapper();
-                                typescriptInterfaceShowerWrapper.setContent(markedContent);
+                                typescriptInterfaceShowerWrapper.setContent(finalContent);
                                 // 設置類名用於建議檔名
                                 typescriptInterfaceShowerWrapper.setClassName(fileNameToSave);
                                 typescriptInterfaceShowerWrapper.show();
-
-                                // 顯示調試信息
-                                System.out.println("Action - 顯示內容長度: " + markedContent.length());
                             } catch (Exception ex) {
                                 ex.printStackTrace();
                                 Messages.showMessageDialog("顯示對話框時發生錯誤: " + ex.getMessage(), "錯誤",

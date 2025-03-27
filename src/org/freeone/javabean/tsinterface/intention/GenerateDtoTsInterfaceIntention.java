@@ -116,7 +116,6 @@ public class GenerateDtoTsInterfaceIntention extends PsiElementBaseIntentionActi
         } else {
             StringBuilder mergedContent = new StringBuilder();
             for (Map.Entry<String, String> entry : contentMap.entrySet()) {
-                mergedContent.append("// ").append(entry.getKey()).append(".d.ts\n");
                 mergedContent.append(entry.getValue()).append("\n\n");
             }
             return mergedContent.toString();
@@ -139,16 +138,13 @@ public class GenerateDtoTsInterfaceIntention extends PsiElementBaseIntentionActi
     private void showInTextEditor(String content) {
         // 確保有內容才顯示
         if (content != null && !content.trim().isEmpty()) {
-            // 添加標記以便識別內容來源
-            String markedContent = "// Generated on: " + java.time.LocalDateTime.now() + "\n" +
-                    "// Method: GenerateDtoTsInterfaceIntention\n" +
-                    "// Content length: " + content.length() + " characters\n\n" +
-                    content;
+            // 不添加額外標記，保持內容的原始格式
+            final String finalContent = content;
 
             // 使用獨立的線程安全方式顯示
             SwingUtilities.invokeLater(() -> {
                 TypescriptInterfaceShowerWrapper wrapper = new TypescriptInterfaceShowerWrapper();
-                wrapper.setContent(markedContent);
+                wrapper.setContent(finalContent);
 
                 // 從內容中提取類名
                 String classNames = extractClassNames(content);
@@ -157,9 +153,6 @@ public class GenerateDtoTsInterfaceIntention extends PsiElementBaseIntentionActi
                 }
 
                 wrapper.show();
-
-                // 顯示調試信息
-                System.out.println("意圖操作 - 顯示內容長度: " + markedContent.length());
             });
         } else {
             // 如果內容為空，顯示錯誤消息
