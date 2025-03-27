@@ -14,7 +14,10 @@ java {
 
 repositories {
     mavenCentral()
-    maven { url = uri("https://cache-redirector.jetbrains.com/intellij-dependencies") }
+maven { url = uri("https://repo.jetbrains.team/intellij-repository/releases") }
+    maven { url = uri("https://packages.jetbrains.team/maven/p/ij/intellij-dependencies") }
+    
+    // maven { url = uri("https://cache-redirector.jetbrains.com/intellij-dependencies") }
 }
 
 // 配置源碼目錄
@@ -30,7 +33,7 @@ sourceSets {
 }
 
 intellij {
-    version.set("2024.3")
+    version.set("2024.1")
     type.set("IC")
     plugins.set(listOf("com.intellij.java"))
     updateSinceUntilBuild.set(false)
