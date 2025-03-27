@@ -3,7 +3,7 @@ package org.freeone.javabean.tsinterface;
 import com.intellij.lang.jvm.JvmClassKind;
 import com.intellij.notification.Notification;
 import com.intellij.notification.NotificationDisplayType;
-import com.intellij.notification.NotificationGroup;
+import com.intellij.notification.NotificationGroupManager;
 import com.intellij.notification.NotificationType;
 import com.intellij.notification.NotificationGroupManager;
 import com.intellij.openapi.actionSystem.AnAction;
@@ -21,8 +21,9 @@ import org.freeone.javabean.tsinterface.swing.SampleDialogWrapper;
 import org.freeone.javabean.tsinterface.swing.TypescriptInterfaceShowerWrapper;
 import org.freeone.javabean.tsinterface.util.CommonUtils;
 import org.freeone.javabean.tsinterface.util.TypescriptContentGenerator;
-import org.freeone.javabean.tsinterface.util.TypescriptUtils;
 
+import javax.swing.*;
+import javax.swing.SwingUtilities;
 import java.awt.*;
 import java.awt.datatransfer.Clipboard;
 import java.awt.datatransfer.StringSelection;
@@ -39,7 +40,7 @@ import java.util.Optional;
  */
 public class JavaBeanToTypescriptInterfaceAction extends AnAction {
 
-    private final NotificationGroup notificationGroup = NotificationGroupManager.getInstance()
+    private final com.intellij.notification.NotificationGroup notificationGroup = NotificationGroupManager.getInstance()
             .getNotificationGroup("JavaDtoToTypescriptInterface");
 
     @Override
@@ -64,13 +65,13 @@ public class JavaBeanToTypescriptInterfaceAction extends AnAction {
         if (virtualFiles != null && virtualFiles.length == 1) {
             VirtualFile target = virtualFiles[0];
             if (target.isDirectory()) {
-                Messages.showInfoMessage("Please choose a Java file !", "");
+                Messages.showMessageDialog("Please choose a Java file !", "", Messages.getInformationIcon());
                 return;
             }
             PsiManager psiMgr = PsiManager.getInstance(project);
             PsiFile file = psiMgr.findFile(target);
             if (!(file instanceof PsiJavaFile)) {
-                Messages.showInfoMessage("Unsupported source file!", "");
+                Messages.showMessageDialog("Unsupported source file!", "", Messages.getInformationIcon());
                 return;
             }
             PsiElement psiElement = e.getData(PlatformDataKeys.PSI_ELEMENT);
@@ -104,20 +105,20 @@ public class JavaBeanToTypescriptInterfaceAction extends AnAction {
                 }
 
                 if (psiElement == null) {
-                    Messages.showInfoMessage("Can not find a class!", "");
+                    Messages.showMessageDialog("Can not find a class!", "", Messages.getInformationIcon());
                     return;
                 }
             } else {
                 // ProjectViewPopup
                 if (psiElement == null) {
-                    Messages.showInfoMessage("Can not find a class", "");
+                    Messages.showMessageDialog("Can not find a class", "", Messages.getInformationIcon());
                     return;
                 }
             }
 
             if (menuText.contains("2") || description.contains("2.0")) {
                 if (psiElement == null) {
-                    Messages.showInfoMessage("Can not find a class", "");
+                    Messages.showMessageDialog("Can not find a class", "", Messages.getInformationIcon());
                     return;
                 }
                 if (psiElement instanceof PsiClass) {
@@ -139,10 +140,11 @@ public class JavaBeanToTypescriptInterfaceAction extends AnAction {
                             boolean b = sampleDialogWrapper.showAndGet();
                             if (b) {
                                 // 只有內部 public static class 會執行這一步
-                                String interfaceContent = TypescriptUtils
-                                        .generatorInterfaceContentForPsiClassElement(project, psiClass, needSaveToFile);
+                                TypescriptContentGenerator.processPsiClass(project, psiClass, needSaveToFile);
+                                String content = TypescriptContentGenerator.mergeContent(psiClass, needSaveToFile);
+                                TypescriptContentGenerator.clearCache();
                                 generateTypescriptContent(e, project, needSaveToFile, psiClass.getName(),
-                                        interfaceContent);
+                                        content);
                                 return;
                             }
                         }
@@ -150,16 +152,22 @@ public class JavaBeanToTypescriptInterfaceAction extends AnAction {
 
                     // 正常情況下
                     // 聲明文件的主要內容 || content of *.d.ts
-                    String interfaceContent = TypescriptUtils.generatorInterfaceContentForPsiJavaFile(project,
-                            psiJavaFile, needSaveToFile);
-                    generateTypescriptContent(e, project, needSaveToFile,
-                            psiJavaFile.getVirtualFile().getNameWithoutExtension(), interfaceContent);
-
+                    PsiClass[] classes = psiJavaFile.getClasses();
+                    if (classes.length > 0) {
+                        PsiClass mainClass = classes[0];
+                        TypescriptContentGenerator.processPsiClass(project, mainClass, needSaveToFile);
+                        String content = TypescriptContentGenerator.mergeContent(mainClass, needSaveToFile);
+                        TypescriptContentGenerator.clearCache();
+                        generateTypescriptContent(e, project, needSaveToFile,
+                                psiJavaFile.getVirtualFile().getNameWithoutExtension(), content);
+                    } else {
+                        Messages.showMessageDialog("No classes found in file", "", Messages.getInformationIcon());
+                    }
                 }
             }
 
         } else {
-            Messages.showInfoMessage("Please choose a Java", "");
+            Messages.showMessageDialog("Please choose a Java", "", Messages.getInformationIcon());
         }
     }
 
@@ -186,9 +194,11 @@ public class JavaBeanToTypescriptInterfaceAction extends AnAction {
                             new FileOutputStream(interfaceFileSavePath, false), StandardCharsets.UTF_8));
                     bufferedWriter.write(interfaceContent);
                     bufferedWriter.close();
-                    Notification notification = notificationGroup.createNotification(
-                            "The target file was saved to:  " + interfaceFileSavePath, NotificationType.INFORMATION);
-                    notification.setImportant(true).notify(project);
+                    // 使用新的 Notification Builder API
+                    notificationGroup.createNotification(
+                            "The target file was saved to:  " + interfaceFileSavePath, NotificationType.INFORMATION)
+                            .setImportant(true)
+                            .notify(project);
                 } catch (IOException ioException) {
                     ioException.printStackTrace();
                 }
@@ -202,16 +212,39 @@ public class JavaBeanToTypescriptInterfaceAction extends AnAction {
                     Clipboard systemClipboard = Toolkit.getDefaultToolkit().getSystemClipboard();
                     Transferable tText = new StringSelection(interfaceContent);
                     systemClipboard.setContents(tText, null);
-                    Notification notification = notificationGroup.createNotification("Copy To Clipboard Completed",
-                            NotificationType.INFORMATION);
-                    notification.setImportant(false).notify(project);
+                    // 使用新的 Notification Builder API
+                    notificationGroup.createNotification(
+                            "Copy To Clipboard Completed", NotificationType.INFORMATION)
+                            .setImportant(false)
+                            .notify(project);
                 } else {
                     // 在文本區域顯示編輯
-                    TypescriptInterfaceShowerWrapper typescriptInterfaceShowerWrapper = new TypescriptInterfaceShowerWrapper();
-                    typescriptInterfaceShowerWrapper.setContent(interfaceContent);
-                    typescriptInterfaceShowerWrapper.setOKActionEnabled(false);
-                    typescriptInterfaceShowerWrapper.setSize(500, 600);
-                    typescriptInterfaceShowerWrapper.show();
+                    if (interfaceContent != null && !interfaceContent.trim().isEmpty()) {
+                        // 添加標記以便識別內容
+                        final String markedContent = "// Generated on: " + java.time.LocalDateTime.now() + "\n" +
+                                "// Method: JavaBeanToTypescriptInterfaceAction\n" +
+                                "// Content length: " + interfaceContent.length() + " characters\n\n" +
+                                interfaceContent;
+
+                        // 使用獨立的線程安全方式顯示
+                        SwingUtilities.invokeLater(() -> {
+                            try {
+                                TypescriptInterfaceShowerWrapper typescriptInterfaceShowerWrapper = new TypescriptInterfaceShowerWrapper();
+                                typescriptInterfaceShowerWrapper.setContent(markedContent);
+                                typescriptInterfaceShowerWrapper.show();
+
+                                // 顯示調試信息
+                                System.out.println("Action - 顯示內容長度: " + markedContent.length());
+                            } catch (Exception ex) {
+                                ex.printStackTrace();
+                                Messages.showMessageDialog("顯示對話框時發生錯誤: " + ex.getMessage(), "錯誤",
+                                        Messages.getErrorIcon());
+                            }
+                        });
+                    } else {
+                        // 如果內容為空，顯示錯誤消息
+                        Messages.showMessageDialog("無法生成 TypeScript 接口內容", "錯誤", Messages.getErrorIcon());
+                    }
                 }
             } catch (Exception exception) {
                 exception.printStackTrace();

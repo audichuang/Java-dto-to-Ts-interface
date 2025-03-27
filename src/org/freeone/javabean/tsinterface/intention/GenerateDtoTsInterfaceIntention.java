@@ -2,16 +2,35 @@ package org.freeone.javabean.tsinterface.intention;
 
 import com.intellij.codeInsight.intention.IntentionAction;
 import com.intellij.codeInsight.intention.PsiElementBaseIntentionAction;
+import com.intellij.openapi.application.ApplicationManager;
+import com.intellij.openapi.application.ReadAction;
+import com.intellij.openapi.application.WriteAction;
 import com.intellij.openapi.editor.Editor;
 import com.intellij.openapi.project.Project;
+import com.intellij.openapi.ui.Messages;
+import com.intellij.openapi.ui.popup.JBPopupFactory;
+import com.intellij.openapi.ui.popup.ListPopup;
+import com.intellij.openapi.ui.popup.PopupStep;
+import com.intellij.openapi.ui.popup.util.BaseListPopupStep;
 import com.intellij.psi.*;
 import com.intellij.psi.util.PsiTreeUtil;
 import com.intellij.util.IncorrectOperationException;
 import org.freeone.javabean.tsinterface.service.DtoTypescriptGeneratorService;
+import org.freeone.javabean.tsinterface.swing.TypescriptInterfaceShowerWrapper;
+import org.freeone.javabean.tsinterface.util.TypescriptContentGenerator;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
+import javax.swing.*;
+import javax.swing.SwingUtilities;
+import java.awt.*;
+import java.awt.datatransfer.Clipboard;
+import java.awt.datatransfer.StringSelection;
+import java.awt.datatransfer.Transferable;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * 用於檢測方法簽名中的 DTO 類並提供生成 TypeScript 接口的選項
@@ -21,42 +40,142 @@ public class GenerateDtoTsInterfaceIntention extends PsiElementBaseIntentionActi
     @Override
     public void invoke(@NotNull Project project, Editor editor, @NotNull PsiElement element)
             throws IncorrectOperationException {
-        // 尋找包含當前元素的方法聲明
-        PsiMethod method = PsiTreeUtil.getParentOfType(element, PsiMethod.class);
-        if (method == null) {
-            return;
+        // 檢查是否在預覽模式下
+        if (editor == null || isPreviewMode(project)) {
+            return; // 預覽模式下不執行實際操作
         }
 
-        // 收集所有需要處理的 DTO 類
-        List<PsiClass> dtoClasses = collectDtoClasses(method);
-        if (dtoClasses.isEmpty()) {
-            return;
-        }
+        // 確保模型讀取在讀取線程中執行
+        ReadAction.run(() -> {
+            // 尋找包含當前元素的方法聲明
+            PsiMethod method = PsiTreeUtil.getParentOfType(element, PsiMethod.class);
+            if (method == null) {
+                return;
+            }
 
-        // 生成 TypeScript 接口
-        DtoTypescriptGeneratorService.generateTypescriptInterfaces(project, dtoClasses, false);
+            // 收集所有需要處理的 DTO 類
+            List<PsiClass> dtoClasses = collectDtoClasses(method);
+            if (dtoClasses.isEmpty()) {
+                ApplicationManager.getApplication().invokeLater(
+                        () -> Messages.showMessageDialog("沒有找到要處理的 DTO 類", "提示", Messages.getInformationIcon()));
+                return;
+            }
+
+            // 生成 TypeScript 接口
+            Map<String, String> contentMap = new HashMap<>();
+            for (PsiClass psiClass : dtoClasses) {
+                try {
+                    TypescriptContentGenerator.processPsiClass(project, psiClass, false);
+                    String content = TypescriptContentGenerator.mergeContent(psiClass, false);
+                    contentMap.put(psiClass.getName(), content);
+                    TypescriptContentGenerator.clearCache();
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            }
+
+            if (contentMap.isEmpty()) {
+                ApplicationManager.getApplication().invokeLater(
+                        () -> Messages.showMessageDialog("生成 TypeScript 接口失敗", "錯誤", Messages.getErrorIcon()));
+                return;
+            }
+
+            // 合併內容
+            final String mergedContent = mergeContent(contentMap);
+            final Map<String, String> finalContentMap = contentMap;
+
+            // 所有 UI 操作必須在 EDT 中執行
+            ApplicationManager.getApplication().invokeLater(() -> {
+                // 顯示選項菜單
+                List<String> options = List.of("保存到文件", "複製到剪貼板", "在文本框中編輯");
+                ListPopup popup = JBPopupFactory.getInstance().createListPopup(
+                        new BaseListPopupStep<>("選擇操作", options) {
+                            @Override
+                            public @Nullable PopupStep<?> onChosen(String selectedValue, boolean finalChoice) {
+                                return doFinalStep(() -> {
+                                    if (selectedValue.equals("保存到文件")) {
+                                        DtoTypescriptGeneratorService.saveToFiles(project, finalContentMap);
+                                    } else if (selectedValue.equals("複製到剪貼板")) {
+                                        copyToClipboard(project, mergedContent);
+                                    } else if (selectedValue.equals("在文本框中編輯")) {
+                                        showInTextEditor(mergedContent);
+                                    }
+                                });
+                            }
+                        });
+
+                popup.showInBestPositionFor(editor);
+            });
+        });
+    }
+
+    private String mergeContent(Map<String, String> contentMap) {
+        if (contentMap.size() == 1) {
+            return contentMap.values().iterator().next();
+        } else {
+            StringBuilder mergedContent = new StringBuilder();
+            for (Map.Entry<String, String> entry : contentMap.entrySet()) {
+                mergedContent.append("// ").append(entry.getKey()).append(".d.ts\n");
+                mergedContent.append(entry.getValue()).append("\n\n");
+            }
+            return mergedContent.toString();
+        }
+    }
+
+    private void copyToClipboard(Project project, String content) {
+        Clipboard systemClipboard = Toolkit.getDefaultToolkit().getSystemClipboard();
+        Transferable tText = new StringSelection(content);
+        systemClipboard.setContents(tText, null);
+
+        Messages.showMessageDialog("已將 TypeScript 接口複製到剪貼板", "提示", Messages.getInformationIcon());
+    }
+
+    private void showInTextEditor(String content) {
+        // 確保有內容才顯示
+        if (content != null && !content.trim().isEmpty()) {
+            // 添加標記以便識別內容來源
+            String markedContent = "// Generated on: " + java.time.LocalDateTime.now() + "\n" +
+                    "// Method: GenerateDtoTsInterfaceIntention\n" +
+                    "// Content length: " + content.length() + " characters\n\n" +
+                    content;
+
+            // 使用獨立的線程安全方式顯示
+            SwingUtilities.invokeLater(() -> {
+                TypescriptInterfaceShowerWrapper wrapper = new TypescriptInterfaceShowerWrapper();
+                wrapper.setContent(markedContent);
+                wrapper.show();
+
+                // 顯示調試信息
+                System.out.println("意圖操作 - 顯示內容長度: " + markedContent.length());
+            });
+        } else {
+            // 如果內容為空，顯示錯誤消息
+            Messages.showMessageDialog("生成的 TypeScript 接口內容為空", "錯誤", Messages.getErrorIcon());
+        }
     }
 
     /**
      * 收集方法簽名中的所有 DTO 類
      */
     private List<PsiClass> collectDtoClasses(PsiMethod method) {
-        List<PsiClass> dtoClasses = new ArrayList<>();
+        return ReadAction.compute(() -> {
+            List<PsiClass> dtoClasses = new ArrayList<>();
 
-        // 檢查返回類型
-        PsiType returnType = method.getReturnType();
-        if (returnType != null) {
-            addDtoClassesFromType(returnType, dtoClasses);
-        }
+            // 檢查返回類型
+            PsiType returnType = method.getReturnType();
+            if (returnType != null) {
+                addDtoClassesFromType(returnType, dtoClasses);
+            }
 
-        // 檢查參數類型
-        PsiParameter[] parameters = method.getParameterList().getParameters();
-        for (PsiParameter parameter : parameters) {
-            PsiType parameterType = parameter.getType();
-            addDtoClassesFromType(parameterType, dtoClasses);
-        }
+            // 檢查參數類型
+            PsiParameter[] parameters = method.getParameterList().getParameters();
+            for (PsiParameter parameter : parameters) {
+                PsiType parameterType = parameter.getType();
+                addDtoClassesFromType(parameterType, dtoClasses);
+            }
 
-        return dtoClasses;
+            return dtoClasses;
+        });
     }
 
     /**
@@ -66,7 +185,7 @@ public class GenerateDtoTsInterfaceIntention extends PsiElementBaseIntentionActi
         // 處理泛型類型
         if (type instanceof PsiClassType) {
             PsiClassType classType = (PsiClassType) type;
-            PsiClass psiClass = classType.resolve();
+            PsiClass psiClass = ReadAction.compute(() -> classType.resolve());
 
             if (psiClass != null && isDtoClass(psiClass)) {
                 dtoClasses.add(psiClass);
@@ -139,5 +258,15 @@ public class GenerateDtoTsInterfaceIntention extends PsiElementBaseIntentionActi
     @Override
     public String getFamilyName() {
         return "Java DTO 到 TypeScript 接口";
+    }
+
+    /**
+     * 檢查當前是否在預覽模式下
+     */
+    private boolean isPreviewMode(Project project) {
+        return ApplicationManager.getApplication().isUnitTestMode() ||
+                project == null ||
+                project.isDisposed() ||
+                !ApplicationManager.getApplication().isDispatchThread(); // 非 EDT 線程可能是預覽
     }
 }

@@ -1,13 +1,20 @@
 plugins {
     id("org.jetbrains.intellij") version "1.17.4"
     id("io.freefair.lombok") version "8.4"
+    java
 }
 
 group = "org.freeone.javabean.tsinterface"
-version = "0.2.7"
+version = "0.2.8"
+
+java {
+    sourceCompatibility = JavaVersion.VERSION_17
+    targetCompatibility = JavaVersion.VERSION_17
+}
 
 repositories {
     mavenCentral()
+    maven { url = uri("https://cache-redirector.jetbrains.com/intellij-dependencies") }
 }
 
 // 配置源碼目錄
@@ -26,6 +33,7 @@ intellij {
     version.set("2024.3")
     type.set("IC")
     plugins.set(listOf("com.intellij.java"))
+    updateSinceUntilBuild.set(false)
 }
 
 dependencies {
@@ -38,8 +46,8 @@ tasks {
     // 配置 Java 編譯選項
     withType<JavaCompile> {
         options.encoding = "UTF-8"
-        sourceCompatibility = "17"
-        targetCompatibility = "17"
+        options.isFailOnError = false
+        options.compilerArgs.add("-Xlint:deprecation")
     }
 
     patchPluginXml {
@@ -48,9 +56,14 @@ tasks {
         pluginDescription.set("將 Java DTO 轉換為 TypeScript 接口定義")
         changeNotes.set("""
             <ul>
-                <li>更名為 Java-dto-to-Ts-interface</li>
+                <li>0.2.8: 改進 Alt+Enter 意圖操作，提供保存、複製和編輯選項</li>
+                <li>0.2.7: 更名為 Java-dto-to-Ts-interface</li>
             </ul>
         """)
         pluginId.set("org.freeone.javadto.tsinterface")
     }
+    
+    // runIde {
+    //     jvmArgs("-Xmx2g")
+    // }
 } 

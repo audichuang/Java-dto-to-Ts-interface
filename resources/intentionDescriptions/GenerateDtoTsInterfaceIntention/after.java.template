@@ -1,0 +1,7 @@
+/**
+ * 控制器方法（提供保存、複製或編輯 DTO 的 TypeScript 接口選項）
+ */
+@PostMapping
+public ResponseTemplate<QryStatementTranrs> convertCustomer(@RequestBody RequestTemplate<QryStatementTranrq> req) {
+    // 方法實現
+} 

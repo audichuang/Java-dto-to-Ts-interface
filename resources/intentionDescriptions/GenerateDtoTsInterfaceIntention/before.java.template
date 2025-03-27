@@ -1,0 +1,7 @@
+/**
+ * 控制器方法
+ */
+@PostMapping
+public ResponseTemplate<QryStatementTranrs> convertCustomer(@RequestBody RequestTemplate<QryStatementTranrq> req) {
+    // 方法實現
+} 

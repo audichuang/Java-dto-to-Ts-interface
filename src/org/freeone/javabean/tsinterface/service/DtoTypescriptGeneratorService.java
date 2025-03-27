@@ -41,7 +41,7 @@ public class DtoTypescriptGeneratorService {
     public static void generateTypescriptInterfaces(Project project, List<PsiClass> dtoClasses,
             boolean needSaveToFile) {
         if (dtoClasses.isEmpty()) {
-            Messages.showInfoMessage("沒有找到要處理的 DTO 類", "提示");
+            Messages.showMessageDialog("沒有找到要處理的 DTO 類", "提示", Messages.getInformationIcon());
             return;
         }
 
@@ -59,7 +59,7 @@ public class DtoTypescriptGeneratorService {
         }
 
         if (contentMap.isEmpty()) {
-            Messages.showInfoMessage("生成 TypeScript 接口失敗", "錯誤");
+            Messages.showMessageDialog("生成 TypeScript 接口失敗", "錯誤", Messages.getErrorIcon());
             return;
         }
 
@@ -73,7 +73,7 @@ public class DtoTypescriptGeneratorService {
     /**
      * 將生成的 TypeScript 接口保存到文件
      */
-    private static void saveToFiles(Project project, Map<String, String> contentMap) {
+    public static void saveToFiles(Project project, Map<String, String> contentMap) {
         FileChooserDescriptor chooserDescriptor = CommonUtils.createFileChooserDescriptor("選擇一個文件夾",
                 "TypeScript 聲明文件（.d.ts）將保存在此文件夾中");
         VirtualFile savePathFile = FileChooser.chooseFile(chooserDescriptor, null, null);
