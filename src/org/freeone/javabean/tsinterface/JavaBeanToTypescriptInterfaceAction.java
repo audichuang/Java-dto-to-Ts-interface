@@ -8,6 +8,8 @@ import com.intellij.openapi.actionSystem.AnAction;
 import com.intellij.openapi.actionSystem.AnActionEvent;
 import com.intellij.openapi.actionSystem.PlatformDataKeys;
 import com.intellij.openapi.actionSystem.Presentation;
+import com.intellij.openapi.application.ApplicationManager;
+import com.intellij.openapi.application.ModalityState;
 import com.intellij.openapi.fileChooser.FileChooser;
 import com.intellij.openapi.fileChooser.FileChooserDescriptor;
 import com.intellij.openapi.project.Project;
@@ -19,6 +21,7 @@ import org.freeone.javabean.tsinterface.swing.SampleDialogWrapper;
 import org.freeone.javabean.tsinterface.swing.TypescriptInterfaceShowerWrapper;
 import org.freeone.javabean.tsinterface.util.CommonUtils;
 import org.freeone.javabean.tsinterface.util.TypescriptContentGenerator;
+import org.freeone.javabean.tsinterface.service.DtoTypescriptGeneratorService;
 
 import javax.swing.*;
 import javax.swing.SwingUtilities;
@@ -31,6 +34,9 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.nio.charset.StandardCharsets;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 /**
@@ -249,6 +255,94 @@ public class JavaBeanToTypescriptInterfaceAction extends AnAction {
             } catch (Exception exception) {
                 exception.printStackTrace();
             }
+        }
+    }
+
+    /**
+     * 顯示選項對話框
+     */
+    private void showOptionsDialog(AnActionEvent event, List<PsiClass> psiClasses, String title) {
+        Project project = event.getProject();
+
+        // 使用正確的模態狀態顯示操作選項
+        ApplicationManager.getApplication().invokeLater(() -> {
+            try {
+                String[] options = { "保存到文件", "複製到剪貼板", "在文本框中編輯" };
+
+                int choice = Messages.showDialog(
+                        project,
+                        "請選擇操作",
+                        title,
+                        options,
+                        0,
+                        Messages.getQuestionIcon());
+
+                if (choice == 0) { // 保存到文件
+                    DtoTypescriptGeneratorService.generateTypescriptInterfaces(project, psiClasses, true);
+                } else if (choice == 1) { // 複製到剪貼板
+                    DtoTypescriptGeneratorService.generateTypescriptInterfaces(project, psiClasses, false);
+                } else if (choice == 2) { // 在文本框中編輯
+                    processSelectedClassesForEditor(project, psiClasses);
+                }
+            } catch (Exception e) {
+                System.err.println("顯示選項對話框時發生錯誤: " + e.getMessage());
+                e.printStackTrace();
+
+                // 使用通知而不是彈窗
+                Notification notification = notificationGroup.createNotification(
+                        "顯示選項時發生錯誤: " + e.getMessage(),
+                        NotificationType.ERROR);
+                notification.notify(project);
+            }
+        }, ModalityState.defaultModalityState());
+    }
+
+    /**
+     * 處理選中的類，生成 TypeScript 接口並顯示在編輯器中
+     */
+    private void processSelectedClassesForEditor(Project project, List<PsiClass> psiClasses) {
+        try {
+            // 生成 TypeScript 接口內容
+            Map<String, String> contentMap = new HashMap<>();
+
+            for (PsiClass psiClass : psiClasses) {
+                try {
+                    TypescriptContentGenerator.processPsiClass(project, psiClass, false);
+                    String content = TypescriptContentGenerator.mergeContent(psiClass, false);
+                    contentMap.put(psiClass.getName(), content);
+                } catch (Exception e) {
+                    System.err.println("處理類 " + psiClass.getName() + " 時發生錯誤: " + e.getMessage());
+                    e.printStackTrace();
+                } finally {
+                    // 清理緩存
+                    TypescriptContentGenerator.clearCache();
+                }
+            }
+
+            if (contentMap.isEmpty()) {
+                // 使用通知而不是彈窗
+                ApplicationManager.getApplication().invokeLater(() -> {
+                    Notification notification = notificationGroup.createNotification(
+                            "沒有生成任何 TypeScript 接口內容",
+                            NotificationType.WARNING);
+                    notification.notify(project);
+                }, ModalityState.defaultModalityState());
+                return;
+            }
+
+            // 顯示在編輯器中
+            DtoTypescriptGeneratorService.showInTextEditor(project, contentMap);
+        } catch (Exception e) {
+            System.err.println("處理選中類時發生錯誤: " + e.getMessage());
+            e.printStackTrace();
+
+            // 使用通知而不是彈窗
+            ApplicationManager.getApplication().invokeLater(() -> {
+                Notification notification = notificationGroup.createNotification(
+                        "處理選中類時發生錯誤: " + e.getMessage(),
+                        NotificationType.ERROR);
+                notification.notify(project);
+            }, ModalityState.defaultModalityState());
         }
     }
 }

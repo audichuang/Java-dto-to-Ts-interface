@@ -223,10 +223,16 @@ public class TypescriptContentGenerator {
                         }
                     }
 
-                    // 默认将分隔标记设置成 ？：
-                    String fieldSplitTag = NOT_REQUIRE_SPLIT_TAG;
-                    if (CommonUtils.isFieldRequire(fieldItem.getAnnotations())) {
-                        fieldSplitTag = REQUIRE_SPLIT_TAG;
+                    // 根據設置決定是否添加可選標記
+                    String fieldSplitTag = REQUIRE_SPLIT_TAG; // 默認使用冒號（:）
+
+                    // 只有在啟用添加可選標記的設置時，才會添加問號
+                    if (JavaBeanToTypescriptInterfaceSettingsState.getInstance().addOptionalMarkToAllFields) {
+                        fieldSplitTag = NOT_REQUIRE_SPLIT_TAG;
+                        // 如果字段有必填註解，則使用冒號
+                        if (CommonUtils.isFieldRequire(fieldItem.getAnnotations())) {
+                            fieldSplitTag = REQUIRE_SPLIT_TAG;
+                        }
                     }
 
                     String typeString;

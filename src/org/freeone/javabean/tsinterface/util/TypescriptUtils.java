@@ -50,7 +50,8 @@ public class TypescriptUtils {
         canonicalText2findClassTimeMap.clear();
     }
 
-    public static String generatorInterfaceContentForPsiClassElement(Project project, PsiClass psiClass, boolean isDefault) {
+    public static String generatorInterfaceContentForPsiClassElement(Project project, PsiClass psiClass,
+            boolean isDefault) {
         StringBuilder interfaceContent;
         // 保存到文件中就是需要default, 不然就不是
         try {
@@ -61,18 +62,19 @@ public class TypescriptUtils {
             }
 
             doClassInterfaceContentForTypeScript(project, 1, interfaceContent, defaultText, psiClass);
-            //将Map转换成List
+            // 将Map转换成List
             List<Map.Entry<String, Integer>> list = new ArrayList<>(canonicalText2TreeLevel.entrySet());
             // 借助List的sort方法，需要重写排序规则
             list.sort((o1, o2) -> o1.getValue() - o2.getValue());
             // 反转
-//        Collections.reverse(list);
-            // Collections.sort(list, Comparator.comparingInt(Map.Entry::getValue));  // IDE 提示可以写成更简便的这种形式,我还是习惯自己重新，然后lambda简化
-            Map<String, Integer> map2 = new LinkedHashMap<>();  // 这里必须声明成为LinkedHashMap，否则构造新map时会打乱顺序
-            for (Map.Entry<String, Integer> o : list) {  // 构造新map
+            // Collections.reverse(list);
+            // Collections.sort(list, Comparator.comparingInt(Map.Entry::getValue)); // IDE
+            // 提示可以写成更简便的这种形式,我还是习惯自己重新，然后lambda简化
+            Map<String, Integer> map2 = new LinkedHashMap<>(); // 这里必须声明成为LinkedHashMap，否则构造新map时会打乱顺序
+            for (Map.Entry<String, Integer> o : list) { // 构造新map
                 map2.put(o.getKey(), o.getValue());
             }
-            for (Map.Entry<String, Integer> entry : map2.entrySet()) {  // out
+            for (Map.Entry<String, Integer> entry : map2.entrySet()) { // out
                 String key = entry.getKey();
                 String content = canonicalText2TInnerClassInterfaceContent.getOrDefault(key, "");
                 if (content != null) {
@@ -94,25 +96,27 @@ public class TypescriptUtils {
      * @param psiJavaFile
      * @return
      */
-    public static String generatorInterfaceContentForPsiJavaFile(Project project, PsiJavaFile psiJavaFile, boolean isSaveToFile) {
+    public static String generatorInterfaceContentForPsiJavaFile(Project project, PsiJavaFile psiJavaFile,
+            boolean isSaveToFile) {
         String interfaceContent;
         // 保存到文件中就是需要default, 不然就不是
         boolean isDefault = isSaveToFile;
         try {
             interfaceContent = generatorInterfaceContentForPsiJavaFile(project, psiJavaFile, isDefault, 1);
             StringBuilder stringBuilder = new StringBuilder(interfaceContent);
-            //将Map转换成List
+            // 将Map转换成List
             List<Map.Entry<String, Integer>> list = new ArrayList<>(canonicalText2TreeLevel.entrySet());
             // 借助List的sort方法，需要重写排序规则
             Collections.sort(list, (o1, o2) -> o1.getValue() - o2.getValue());
             // 反转
-//        Collections.reverse(list);
-            // Collections.sort(list, Comparator.comparingInt(Map.Entry::getValue));  // IDE 提示可以写成更简便的这种形式,我还是习惯自己重新，然后lambda简化
-            Map<String, Integer> map2 = new LinkedHashMap<>();  // 这里必须声明成为LinkedHashMap，否则构造新map时会打乱顺序
-            for (Map.Entry<String, Integer> o : list) {  // 构造新map
+            // Collections.reverse(list);
+            // Collections.sort(list, Comparator.comparingInt(Map.Entry::getValue)); // IDE
+            // 提示可以写成更简便的这种形式,我还是习惯自己重新，然后lambda简化
+            Map<String, Integer> map2 = new LinkedHashMap<>(); // 这里必须声明成为LinkedHashMap，否则构造新map时会打乱顺序
+            for (Map.Entry<String, Integer> o : list) { // 构造新map
                 map2.put(o.getKey(), o.getValue());
             }
-            for (Map.Entry<String, Integer> entry : map2.entrySet()) {  // out
+            for (Map.Entry<String, Integer> entry : map2.entrySet()) { // out
                 String key = entry.getKey();
                 String content = canonicalText2TInnerClassInterfaceContent.getOrDefault(key, "");
                 if (content != null) {
@@ -123,7 +127,6 @@ public class TypescriptUtils {
         } finally {
             clearCache();
         }
-
 
     }
 
@@ -136,7 +139,8 @@ public class TypescriptUtils {
      * @param treeLevel
      * @return
      */
-    public static String generatorTypeContent(Project project, PsiJavaFile psiJavaFile, boolean isDefault, int treeLevel) {
+    public static String generatorTypeContent(Project project, PsiJavaFile psiJavaFile, boolean isDefault,
+            int treeLevel) {
         StringBuilder typeContent = new StringBuilder();
         String defaultText = "";
         if (isDefault) {
@@ -175,7 +179,8 @@ public class TypescriptUtils {
      * @param treeLevel
      * @return
      */
-    public static String generatorInterfaceContentForPsiJavaFile(Project project, PsiJavaFile psiJavaFile, boolean isDefault, int treeLevel) {
+    public static String generatorInterfaceContentForPsiJavaFile(Project project, PsiJavaFile psiJavaFile,
+            boolean isDefault, int treeLevel) {
         StringBuilder interfaceContent = new StringBuilder();
         String defaultText = "";
         if (isDefault) {
@@ -198,7 +203,8 @@ public class TypescriptUtils {
      * @param treeLevel
      * @return
      */
-    public static String generatorInterfaceContentForPsiClass(Project project, PsiClass psiClassInParameters, PsiClass targetPsiClass, boolean isDefault, int treeLevel) {
+    public static String generatorInterfaceContentForPsiClass(Project project, PsiClass psiClassInParameters,
+            PsiClass targetPsiClass, boolean isDefault, int treeLevel) {
         StringBuilder interfaceContent = new StringBuilder();
         String defaultText = "";
         if (isDefault) {
@@ -223,9 +229,11 @@ public class TypescriptUtils {
      * @param defaultText
      * @param aClass
      */
-    private static void doClassInterfaceContentForTypeScript(Project project, int treeLevel, StringBuilder interfaceContent, String defaultText, PsiClass aClass) {
+    private static void doClassInterfaceContentForTypeScript(Project project, int treeLevel,
+            StringBuilder interfaceContent, String defaultText, PsiClass aClass) {
         String classNameAsInterfaceName = aClass.getName();
-        interfaceContent.append("export ").append(defaultText).append("interface ").append(classNameAsInterfaceName).append(" {\n");
+        interfaceContent.append("export ").append(defaultText).append("interface ").append(classNameAsInterfaceName)
+                .append(" {\n");
         PsiField[] fields = aClass.getAllFields();
         if (JavaBeanToTypescriptInterfaceSettingsState.getInstance().ignoreParentField) {
             fields = aClass.getFields();
@@ -233,16 +241,11 @@ public class TypescriptUtils {
         PsiMethod[] allMethods = aClass.getAllMethods();
         for (int i = 0; i < fields.length; i++) {
             PsiField fieldItem = fields[i];
-            // 默认将分隔标记设置成 ？：
-            String fieldSplitTag = NOT_REQUIRE_SPLIT_TAG;
-            if (CommonUtils.isFieldRequire(fieldItem.getAnnotations())) {
-                fieldSplitTag = REQUIRE_SPLIT_TAG;
-            }
             // 获取注释
             processDocComment(interfaceContent, fieldItem);
             String fieldName = fieldItem.getName();
 
-            //  2023-12-26 判断是或否使用JsonProperty
+            // 2023-12-26 判断是或否使用JsonProperty
             if (JavaBeanToTypescriptInterfaceSettingsState.getInstance().useAnnotationJsonProperty) {
                 String jsonPropertyValue = CommonUtils.getJsonPropertyValue(fieldItem, allMethods);
                 if (jsonPropertyValue != null) {
@@ -250,6 +253,21 @@ public class TypescriptUtils {
                 }
             }
             interfaceContent.append("  ").append(fieldName);
+
+            // 根據設置決定是否添加可選標記
+            String fieldSplitTag = REQUIRE_SPLIT_TAG; // 默認使用冒號（:）
+
+            // 只有在啟用添加可選標記的設置時，才會添加問號
+            if (JavaBeanToTypescriptInterfaceSettingsState.getInstance().addOptionalMarkToAllFields) {
+                fieldSplitTag = NOT_REQUIRE_SPLIT_TAG;
+                // 如果字段有必填註解，則使用冒號
+                if (CommonUtils.isFieldRequire(fieldItem.getAnnotations())) {
+                    fieldSplitTag = REQUIRE_SPLIT_TAG;
+                }
+            }
+
+            interfaceContent.append(fieldSplitTag);
+
             boolean isArray = CommonUtils.isArrayType(fieldItem.getType());
             boolean isNumber = CommonUtils.isNumberType(fieldItem.getType());
             boolean isString = CommonUtils.isStringType(fieldItem.getType());
@@ -261,7 +279,7 @@ public class TypescriptUtils {
                 processArray(project, treeLevel, interfaceContent, fieldItem, fieldSplitTag);
 
             } else if (isMap) {
-                //  : 2023-12-06 针对map做处理
+                // : 2023-12-06 针对map做处理
                 processMap(project, treeLevel, interfaceContent, fieldItem, fieldSplitTag);
 
             } else if (isJavaUtilDate && JavaBeanToTypescriptInterfaceSettingsState.getInstance().enableDataToString) {
@@ -289,7 +307,6 @@ public class TypescriptUtils {
         interfaceContent.append("}\n");
     }
 
-
     private static void processDocComment(StringBuilder interfaceContent, PsiField fieldItem) {
         PsiDocComment docComment = fieldItem.getDocComment();
         if (docComment != null) {
@@ -304,7 +321,8 @@ public class TypescriptUtils {
         }
     }
 
-    private static void processMap(Project project, int treeLevel, StringBuilder interfaceContent, PsiField fieldItem, String fieldSplitTag) {
+    private static void processMap(Project project, int treeLevel, StringBuilder interfaceContent, PsiField fieldItem,
+            String fieldSplitTag) {
         PsiType type = fieldItem.getType();
         String defaultKTYpe = "string";
         String defaultVType = "any";
@@ -314,7 +332,6 @@ public class TypescriptUtils {
             if (parameters.length == 2) {
                 PsiType kType = parameters[0];
                 PsiType vType = parameters[1];
-
 
                 {
                     boolean isNumber = CommonUtils.isNumberType(vType);
@@ -337,8 +354,10 @@ public class TypescriptUtils {
                         }
                     } else {
                         GlobalSearchScope projectScope = GlobalSearchScope.projectScope(project);
-                        PsiClass psiClass = JavaPsiFacade.getInstance(project).findClass(vType.getCanonicalText(), projectScope);
-                        if (psiClass == null && JavaBeanToTypescriptInterfaceSettingsState.getInstance().allowFindClassInAllScope) {
+                        PsiClass psiClass = JavaPsiFacade.getInstance(project).findClass(vType.getCanonicalText(),
+                                projectScope);
+                        if (psiClass == null
+                                && JavaBeanToTypescriptInterfaceSettingsState.getInstance().allowFindClassInAllScope) {
                             GlobalSearchScope allScope = GlobalSearchScope.allScope(project);
                             psiClass = JavaPsiFacade.getInstance(project).findClass(vType.getCanonicalText(), allScope);
                         }
@@ -349,11 +368,9 @@ public class TypescriptUtils {
                             findClassToTsInterface(project, treeLevel + 1, vType.getCanonicalText());
                         }
 
-
                     }
 
                 }
-
 
             }
 
@@ -361,7 +378,8 @@ public class TypescriptUtils {
         interfaceContent.append(fieldSplitTag).append("{[x:" + defaultKTYpe + "]: " + defaultVType + "}");
     }
 
-    private static void processOtherTypes(Project project, int treeLevel, StringBuilder interfaceContent, PsiField fieldItem, String fieldSplitTag) {
+    private static void processOtherTypes(Project project, int treeLevel, StringBuilder interfaceContent,
+            PsiField fieldItem, String fieldSplitTag) {
 
         String canonicalText = CommonUtils.getJavaBeanTypeForNormalField(fieldItem);
         System.out.println("canonicalText = " + canonicalText);
@@ -384,7 +402,7 @@ public class TypescriptUtils {
             }
             if (psiClass != null) {
                 JvmClassKind classKind = psiClass.getClassKind();
-                //  2022-08-09  ignroe ANNOTATION and  INTERFACE
+                // 2022-08-09 ignroe ANNOTATION and INTERFACE
                 if (classKind != JvmClassKind.ANNOTATION && classKind != JvmClassKind.INTERFACE) {
                     canonicalText2findClassTimeMap.put(canonicalText, 1);
                     JvmReferenceType superClassType = psiClass.getSuperClassType();
@@ -393,23 +411,25 @@ public class TypescriptUtils {
                         PsiElement parent = psiClass.getParent();
                         if (parent instanceof PsiJavaFile) {
                             PsiJavaFile enumParentJavaFile = (PsiJavaFile) parent;
-                            String findTypeContent = generatorTypeContent(project, enumParentJavaFile, false, treeLevel);
+                            String findTypeContent = generatorTypeContent(project, enumParentJavaFile, false,
+                                    treeLevel);
                             canonicalText2TInnerClassInterfaceContent.put(canonicalText, findTypeContent);
                         }
-
 
                     } else {
                         // class
                         canonicalText2findClassTimeMap.put(canonicalText, 1);
                         PsiElement parent = psiClass.getParent();
-                        // 内部类parent instanceof PsiJavaFile  ==false
+                        // 内部类parent instanceof PsiJavaFile ==false
                         if (parent instanceof PsiJavaFile) {
                             PsiJavaFile classParentJavaFile = (PsiJavaFile) parent;
-                            String findClassContent = generatorInterfaceContentForPsiJavaFile(project, classParentJavaFile, false, treeLevel + 1);
+                            String findClassContent = generatorInterfaceContentForPsiJavaFile(project,
+                                    classParentJavaFile, false, treeLevel + 1);
                             canonicalText2TInnerClassInterfaceContent.put(canonicalText, findClassContent);
                         } else if (parent instanceof PsiClass) {
                             PsiClass psiClassParent = (PsiClass) parent;
-                            String findClassContent = generatorInterfaceContentForPsiClass(project, psiClassParent, psiClass, false, treeLevel + 1);
+                            String findClassContent = generatorInterfaceContentForPsiClass(project, psiClassParent,
+                                    psiClass, false, treeLevel + 1);
                             canonicalText2TInnerClassInterfaceContent.put(canonicalText, findClassContent);
                         }
                     }
@@ -436,7 +456,8 @@ public class TypescriptUtils {
      * @param fieldItem
      * @param fieldSplitTag
      */
-    private static void processArray(Project project, int treeLevel, StringBuilder interfaceContent, PsiField fieldItem, String fieldSplitTag) {
+    private static void processArray(Project project, int treeLevel, StringBuilder interfaceContent, PsiField fieldItem,
+            String fieldSplitTag) {
         // 泛型
         String generics = getFirstGenericsForArray(project, treeLevel + 1, interfaceContent, fieldItem);
         if (fieldSplitTag != null) {
@@ -455,7 +476,8 @@ public class TypescriptUtils {
      *
      * @return
      */
-    public static String getFirstGenericsForArray(Project project, int treeLevel, StringBuilder interfaceContent, PsiField fieldItem) {
+    public static String getFirstGenericsForArray(Project project, int treeLevel, StringBuilder interfaceContent,
+            PsiField fieldItem) {
         PsiField field = fieldItem;
         if (CommonUtils.isArrayType(field.getType())) {
             PsiType type = field.getType();
@@ -496,7 +518,9 @@ public class TypescriptUtils {
 
     @NotNull
     private static String getFirstTsTypeForArray(Project project, int treeLevel, PsiType deepComponentType) {
-        List<PsiType> numberSuperClass = Arrays.stream(deepComponentType.getSuperTypes()).filter(superTypeItem -> superTypeItem.getCanonicalText().equals("java.lang.Number")).collect(Collectors.toList());
+        List<PsiType> numberSuperClass = Arrays.stream(deepComponentType.getSuperTypes())
+                .filter(superTypeItem -> superTypeItem.getCanonicalText().equals("java.lang.Number"))
+                .collect(Collectors.toList());
         if (!numberSuperClass.isEmpty()) {
             return "number";
         }
@@ -517,7 +541,8 @@ public class TypescriptUtils {
                     return "any[]";
                 } else {
                     // 判断泛型是不是number
-                    String firstTsTypeForArray = getFirstTsTypeForArray(project, treeLevel + 1, parameters[0].getDeepComponentType());
+                    String firstTsTypeForArray = getFirstTsTypeForArray(project, treeLevel + 1,
+                            parameters[0].getDeepComponentType());
                     return firstTsTypeForArray + "[]";
                 }
             } else if (isMapType) {
@@ -552,11 +577,13 @@ public class TypescriptUtils {
                 PsiElement parent = psiClass.getParent();
                 if (parent instanceof PsiJavaFile) {
                     PsiJavaFile classParentJavaFile = (PsiJavaFile) parent;
-                    String findClassContent = generatorInterfaceContentForPsiJavaFile(project, classParentJavaFile, false, treeLevel + 1);
+                    String findClassContent = generatorInterfaceContentForPsiJavaFile(project, classParentJavaFile,
+                            false, treeLevel + 1);
                     canonicalText2TInnerClassInterfaceContent.put(canonicalText, findClassContent);
                 } else if (parent instanceof PsiClass) {
                     PsiClass psiClassParent = (PsiClass) parent;
-                    String findClassContent = generatorInterfaceContentForPsiClass(project, psiClassParent, psiClass, false, treeLevel + 1);
+                    String findClassContent = generatorInterfaceContentForPsiClass(project, psiClassParent, psiClass,
+                            false, treeLevel + 1);
                     canonicalText2TInnerClassInterfaceContent.put(canonicalText, findClassContent);
                 }
             }
@@ -588,7 +615,6 @@ public class TypescriptUtils {
         } else {
 
         }
-
 
         return typeString;
     }

@@ -190,54 +190,85 @@ public class DtoTypescriptGeneratorService {
             return;
         }
 
-        // 使用原子引用來追蹤對話框實例
-        final java.util.concurrent.atomic.AtomicReference<TypescriptInterfaceShowerWrapper> wrapperRef = new java.util.concurrent.atomic.AtomicReference<>();
+        try {
+            // 準備顯示內容
+            final String mergedContent;
+            final String classNames;
 
-        // 使用 invokeLater 確保在 EDT 上執行 UI 相關操作
-        ApplicationManager.getApplication().invokeLater(() -> {
-            try {
-                // 創建新的對話框實例
-                TypescriptInterfaceShowerWrapper wrapper = new TypescriptInterfaceShowerWrapper();
-                wrapperRef.set(wrapper);
+            if (contentMap.size() == 1) {
+                // 單個類處理
+                Map.Entry<String, String> entry = contentMap.entrySet().iterator().next();
+                mergedContent = entry.getValue();
+                classNames = entry.getKey();
+            } else {
+                // 多個類處理
+                StringBuilder contentBuilder = new StringBuilder();
+                StringBuilder namesBuilder = new StringBuilder();
 
-                // 如果只有一個 DTO 類，直接設置內容
-                if (contentMap.size() == 1) {
-                    Map.Entry<String, String> entry = contentMap.entrySet().iterator().next();
-                    wrapper.setClassName(entry.getKey());
-                    wrapper.setContent(entry.getValue());
-                } else {
-                    // 如果有多個 DTO 類，合併內容並設置類名
-                    StringBuilder mergedContent = new StringBuilder();
-                    for (Map.Entry<String, String> entry : contentMap.entrySet()) {
-                        // 添加類名作為標題
-                        wrapper.addClassName(entry.getKey());
-                        // 添加內容
-                        mergedContent.append(entry.getValue()).append("\n\n");
+                for (Map.Entry<String, String> entry : contentMap.entrySet()) {
+                    if (namesBuilder.length() > 0) {
+                        namesBuilder.append(", ");
                     }
-                    wrapper.setContent(mergedContent.toString());
+                    namesBuilder.append(entry.getKey());
+                    contentBuilder.append(entry.getValue()).append("\n\n");
                 }
 
-                // 使用更安全的方式顯示對話框
-                if (!wrapper.isDisposed()) {
-                    wrapper.show();
-                } else {
-                    System.err.println("對話框已被銷毀，無法顯示");
-                }
-            } catch (Exception e) {
-                // 安全地處理所有異常
-                System.err.println("顯示對話框時發生錯誤: " + e.getMessage());
-                e.printStackTrace();
-
-                // 嘗試關閉可能部分初始化的對話框
-                TypescriptInterfaceShowerWrapper wrapper = wrapperRef.get();
-                if (wrapper != null && !wrapper.isDisposed()) {
-                    try {
-                        wrapper.close(0);
-                    } catch (Exception ex) {
-                        // 忽略清理過程中的錯誤
-                    }
-                }
+                mergedContent = contentBuilder.toString();
+                classNames = namesBuilder.toString();
             }
-        });
+
+            // 確保在 EDT 和正確的模態狀態下執行
+            com.intellij.openapi.application.ApplicationManager.getApplication().invokeLater(() -> {
+                try {
+                    TypescriptInterfaceShowerWrapper wrapper = null;
+                    try {
+                        // 創建對話框
+                        wrapper = new TypescriptInterfaceShowerWrapper();
+                        // 設置類名和內容
+                        wrapper.setClassName(classNames);
+                        wrapper.setContent(mergedContent);
+
+                        // 顯示對話框
+                        final TypescriptInterfaceShowerWrapper finalWrapper = wrapper;
+                        // 再次使用 invokeLater 確保顯示在正確的模態狀態下進行
+                        com.intellij.openapi.application.ApplicationManager.getApplication().invokeLater(() -> {
+                            try {
+                                if (finalWrapper != null && !finalWrapper.isDisposed()) {
+                                    finalWrapper.show();
+                                }
+                            } catch (Exception e) {
+                                System.err.println("顯示對話框時發生錯誤: " + e.getMessage());
+                                e.printStackTrace();
+                                // 嘗試清理資源
+                                if (finalWrapper != null && !finalWrapper.isDisposed()) {
+                                    try {
+                                        finalWrapper.dispose();
+                                    } catch (Exception ex) {
+                                        // 忽略
+                                    }
+                                }
+                            }
+                        }, com.intellij.openapi.application.ModalityState.defaultModalityState());
+                    } catch (Exception e) {
+                        System.err.println("創建對話框時發生錯誤: " + e.getMessage());
+                        e.printStackTrace();
+                        // 清理資源
+                        if (wrapper != null && !wrapper.isDisposed()) {
+                            try {
+                                wrapper.dispose();
+                            } catch (Exception ex) {
+                                // 忽略
+                            }
+                        }
+                    }
+                } catch (Exception e) {
+                    System.err.println("準備顯示對話框時發生錯誤: " + e.getMessage());
+                    e.printStackTrace();
+                }
+            }, com.intellij.openapi.application.ModalityState.defaultModalityState());
+        } catch (Exception e) {
+            System.err.println("處理內容時發生錯誤: " + e.getMessage());
+            e.printStackTrace();
+        }
     }
 }

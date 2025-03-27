@@ -93,17 +93,31 @@ public class GenerateDtoTsInterfaceIntention extends PsiElementBaseIntentionActi
                             @Override
                             public @Nullable PopupStep<?> onChosen(String selectedValue, boolean finalChoice) {
                                 return doFinalStep(() -> {
-                                    // 使用 invokeLater 確保 UI 操作在 EDT 上執行，並且在 popup 關閉後執行
-                                    ApplicationManager.getApplication().invokeLater(() -> {
-                                        if (selectedValue.equals("保存到文件")) {
-                                            DtoTypescriptGeneratorService.saveToFiles(project, finalContentMap);
-                                        } else if (selectedValue.equals("複製到剪貼板")) {
-                                            copyToClipboard(project, mergedContent);
-                                        } else if (selectedValue.equals("在文本框中編輯")) {
-                                            // 使用帶有類名支持的顯示方法
-                                            DtoTypescriptGeneratorService.showInTextEditor(project, finalContentMap);
-                                        }
-                                    });
+                                    try {
+                                        // 使用 invokeLater 確保 UI 操作在 EDT 上執行，並且在 popup 關閉後執行
+                                        // 使用 defaultModalityState 而不是 ANY 以避免 TransactionGuard 錯誤
+                                        ApplicationManager.getApplication().invokeLater(() -> {
+                                            try {
+                                                if (selectedValue.equals("保存到文件")) {
+                                                    DtoTypescriptGeneratorService.saveToFiles(project, finalContentMap);
+                                                } else if (selectedValue.equals("複製到剪貼板")) {
+                                                    copyToClipboard(project, mergedContent);
+                                                } else if (selectedValue.equals("在文本框中編輯")) {
+                                                    // 使用帶有類名支持的顯示方法
+                                                    DtoTypescriptGeneratorService.showInTextEditor(project,
+                                                            finalContentMap);
+                                                }
+                                            } catch (Exception e) {
+                                                // 捕獲並記錄任何執行操作時的錯誤
+                                                System.err.println("執行所選操作時發生錯誤: " + e.getMessage());
+                                                e.printStackTrace();
+                                            }
+                                        }, com.intellij.openapi.application.ModalityState.defaultModalityState());
+                                    } catch (Exception e) {
+                                        // 捕獲並記錄任何在設置 invokeLater 時的錯誤
+                                        System.err.println("設置操作執行時發生錯誤: " + e.getMessage());
+                                        e.printStackTrace();
+                                    }
                                 });
                             }
                         });

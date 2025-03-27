@@ -199,6 +199,42 @@ public class TypescriptInterfaceShowerWrapper extends DialogWrapper {
         }
     }
 
+    @Override
+    public void dispose() {
+        // 在處理前先檢查狀態
+        if (isDisposed()) {
+            return; // 避免重複處理
+        }
+
+        try {
+            // 清理資源前先取消所有掛起的操作
+            com.intellij.openapi.application.ApplicationManager.getApplication().invokeLater(() -> {
+                try {
+                    // 確保 UI 組件被正確清理
+                    if (typescriptInterfaceContentDisplayPanel != null) {
+                        typescriptInterfaceContentDisplayPanel.dispose();
+                        typescriptInterfaceContentDisplayPanel = null;
+                    }
+
+                    // 釋放其他資源
+                    fileNameField = null;
+                    className = null;
+
+                    // 最後調用父類的 dispose 方法
+                    super.dispose();
+                } catch (Exception e) {
+                    System.err.println("清理資源時發生錯誤: " + e.getMessage());
+                    e.printStackTrace();
+                    super.dispose(); // 確保父類的 dispose 仍然被調用
+                }
+            }, com.intellij.openapi.application.ModalityState.defaultModalityState());
+        } catch (Exception e) {
+            System.err.println("清理資源時發生錯誤: " + e.getMessage());
+            e.printStackTrace();
+            super.dispose(); // 確保父類的 dispose 仍然被調用
+        }
+    }
+
     protected class CustomerCloseAction extends DialogWrapperAction {
 
         private final TypescriptInterfaceShowerWrapper wrapper;
@@ -323,6 +359,61 @@ public class TypescriptInterfaceShowerWrapper extends DialogWrapper {
                     }
                 }
             }, com.intellij.openapi.application.ModalityState.defaultModalityState());
+        }
+    }
+
+    // 添加內部類以處理對話框組件的資源釋放
+    public static class TypescriptInterfaceContentDisplayPanel {
+        private JPanel panel;
+        private JTextArea textArea;
+        private JScrollPane scrollPane;
+
+        public TypescriptInterfaceContentDisplayPanel() {
+            // 創建組件
+            panel = new JPanel(new BorderLayout());
+            textArea = new JTextArea();
+            textArea.setEditable(true);
+            textArea.setLineWrap(true);
+            textArea.setWrapStyleWord(true);
+            textArea.setFont(new Font(Font.MONOSPACED, Font.PLAIN, 14));
+
+            scrollPane = new JScrollPane(textArea);
+            scrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_ALWAYS);
+            panel.add(scrollPane, BorderLayout.CENTER);
+        }
+
+        public JPanel mainPanel() {
+            return panel;
+        }
+
+        public JTextArea getTextArea() {
+            return textArea;
+        }
+
+        public void setTextContent(String content) {
+            if (textArea != null && content != null) {
+                textArea.setText(content);
+                textArea.setCaretPosition(0);
+                System.out.println("使用 setTextContent 設置內容，長度: " + content.length());
+            }
+        }
+
+        public void dispose() {
+            // 釋放所有組件資源
+            if (textArea != null) {
+                textArea.setText(null); // 清除內容釋放記憶體
+                textArea = null;
+            }
+
+            if (scrollPane != null) {
+                scrollPane.removeAll();
+                scrollPane = null;
+            }
+
+            if (panel != null) {
+                panel.removeAll();
+                panel = null;
+            }
         }
     }
 }

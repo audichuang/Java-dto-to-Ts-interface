@@ -10,15 +10,14 @@ import org.jetbrains.annotations.NotNull;
 /**
  * 持久化
  * Supports storing the application settings in a persistent way.
- * The {@link State} and {@link Storage} annotations define the name of the data and the file name where
+ * The {@link State} and {@link Storage} annotations define the name of the data
+ * and the file name where
  * these persistent application settings are stored.
  * https://plugins.jetbrains.com/docs/intellij/settings-tutorial.html#the-appsettingsstate-class
  */
-@State(
-        name = "JavaBeanToTypescriptInterfaceSetting",
-        storages = @Storage("JavaBeanToTypescriptInterfaceSettingsPlugin.xml")
-)
-public final class JavaBeanToTypescriptInterfaceSettingsState implements PersistentStateComponent<JavaBeanToTypescriptInterfaceSettingsState> {
+@State(name = "JavaBeanToTypescriptInterfaceSetting", storages = @Storage("JavaBeanToTypescriptInterfaceSettingsPlugin.xml"))
+public final class JavaBeanToTypescriptInterfaceSettingsState
+        implements PersistentStateComponent<JavaBeanToTypescriptInterfaceSettingsState> {
 
     public String userName = "TheFreeOne";
 
@@ -30,6 +29,12 @@ public final class JavaBeanToTypescriptInterfaceSettingsState implements Persist
 
     public boolean ignoreParentField = false;
 
+    /**
+     * 控制是否為所有屬性添加可選問號（?:）
+     * true: 所有屬性都添加可選問號（?:）
+     * false: 所有屬性都不加問號，使用普通冒號（:）
+     */
+    public boolean addOptionalMarkToAllFields = false;
 
     public static JavaBeanToTypescriptInterfaceSettingsState getInstance() {
         return ApplicationManager.getApplication().getService(JavaBeanToTypescriptInterfaceSettingsState.class);
@@ -76,5 +81,13 @@ public final class JavaBeanToTypescriptInterfaceSettingsState implements Persist
 
     public void setIgnoreParentField(boolean ignoreParentField) {
         this.ignoreParentField = ignoreParentField;
+    }
+
+    public boolean isAddOptionalMarkToAllFields() {
+        return addOptionalMarkToAllFields;
+    }
+
+    public void setAddOptionalMarkToAllFields(boolean addOptionalMarkToAllFields) {
+        this.addOptionalMarkToAllFields = addOptionalMarkToAllFields;
     }
 }

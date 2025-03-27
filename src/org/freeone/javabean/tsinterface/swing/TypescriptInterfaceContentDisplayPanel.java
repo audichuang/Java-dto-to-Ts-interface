@@ -50,4 +50,38 @@ public class TypescriptInterfaceContentDisplayPanel {
             textArea.repaint();
         }
     }
+
+    /**
+     * 釋放組件資源，防止內存洩漏
+     */
+    public void dispose() {
+        try {
+            // 清理所有監聽器
+            if (textArea != null) {
+                for (java.awt.event.KeyListener listener : textArea.getKeyListeners()) {
+                    textArea.removeKeyListener(listener);
+                }
+                for (java.awt.event.MouseListener listener : textArea.getMouseListeners()) {
+                    textArea.removeMouseListener(listener);
+                }
+                // 清空內容以釋放內存
+                textArea.setText(null);
+                textArea = null;
+            }
+
+            if (scrollPane != null) {
+                scrollPane.removeAll();
+                scrollPane.getViewport().removeAll();
+                scrollPane = null;
+            }
+
+            if (panel != null) {
+                panel.removeAll();
+                panel = null;
+            }
+        } catch (Exception e) {
+            System.err.println("釋放 TypescriptInterfaceContentDisplayPanel 資源時出錯: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
 }
