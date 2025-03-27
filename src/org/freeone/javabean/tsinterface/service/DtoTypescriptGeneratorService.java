@@ -119,9 +119,13 @@ public class DtoTypescriptGeneratorService {
             Transferable tText = new StringSelection(content);
             systemClipboard.setContents(tText, null);
 
-            Notification notification = notificationGroup.createNotification(
-                    "已將 TypeScript 接口複製到剪貼板", NotificationType.INFORMATION);
-            notification.setImportant(false).notify(project);
+            // 不使用彈窗通知，只在控制台輸出
+            System.out.println("已將 TypeScript 接口複製到剪貼板");
+
+            // 如果需要，可以使用狀態欄通知，但不顯示彈窗
+            // notificationGroup.createNotification(
+            // "已將 TypeScript 接口複製到剪貼板", NotificationType.INFORMATION)
+            // .setImportant(false).notify(project);
         } else {
             // 如果有多個 DTO 類，合併內容後複製
             StringBuilder mergedContent = new StringBuilder();
@@ -134,9 +138,14 @@ public class DtoTypescriptGeneratorService {
             Transferable tText = new StringSelection(mergedContent.toString());
             systemClipboard.setContents(tText, null);
 
-            Notification notification = notificationGroup.createNotification(
-                    "已將 " + contentMap.size() + " 個 TypeScript 接口複製到剪貼板", NotificationType.INFORMATION);
-            notification.setImportant(false).notify(project);
+            // 不使用彈窗通知，只在控制台輸出
+            System.out.println("已將 " + contentMap.size() + " 個 TypeScript 接口複製到剪貼板");
+
+            // 如果需要，可以使用狀態欄通知，但不顯示彈窗
+            // notificationGroup.createNotification(
+            // "已將 " + contentMap.size() + " 個 TypeScript 接口複製到剪貼板",
+            // NotificationType.INFORMATION)
+            // .setImportant(false).notify(project);
         }
     }
 

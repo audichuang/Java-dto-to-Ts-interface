@@ -128,7 +128,12 @@ public class GenerateDtoTsInterfaceIntention extends PsiElementBaseIntentionActi
         Transferable tText = new StringSelection(content);
         systemClipboard.setContents(tText, null);
 
-        Messages.showMessageDialog("已將 TypeScript 接口複製到剪貼板", "提示", Messages.getInformationIcon());
+        // 移除彈窗提示，改用更不擾人的方式
+        System.out.println("已將 TypeScript 接口複製到剪貼板，長度: " + content.length());
+
+        // 如果真的需要向用戶顯示提示，可以使用狀態欄通知，但不推薦彈窗
+        // Messages.showMessageDialog("已將 TypeScript 接口複製到剪貼板", "提示",
+        // Messages.getInformationIcon());
     }
 
     private void showInTextEditor(String content) {

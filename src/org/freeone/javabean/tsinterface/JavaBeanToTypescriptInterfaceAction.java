@@ -212,11 +212,16 @@ public class JavaBeanToTypescriptInterfaceAction extends AnAction {
                     Clipboard systemClipboard = Toolkit.getDefaultToolkit().getSystemClipboard();
                     Transferable tText = new StringSelection(interfaceContent);
                     systemClipboard.setContents(tText, null);
-                    // 使用新的 Notification Builder API
-                    notificationGroup.createNotification(
-                            "Copy To Clipboard Completed", NotificationType.INFORMATION)
-                            .setImportant(false)
-                            .notify(project);
+
+                    // 移除彈窗通知，改用更不擾人的方式
+                    // 這裡可以考慮使用狀態欄通知或直接不顯示通知
+                    System.out.println("已複製內容到剪貼板，長度: " + interfaceContent.length());
+
+                    // 如果真的需要用戶知道複製成功，可以使用 IntelliJ 狀態欄通知
+                    // notificationGroup.createNotification(
+                    // "Copy To Clipboard Completed", NotificationType.INFORMATION)
+                    // .setImportant(false)
+                    // .notify(project);
                 } else {
                     // 在文本區域顯示編輯
                     if (interfaceContent != null && !interfaceContent.trim().isEmpty()) {
