@@ -4,10 +4,8 @@ import com.intellij.openapi.application.ApplicationManager;
 import com.intellij.openapi.components.PersistentStateComponent;
 import com.intellij.openapi.components.State;
 import com.intellij.openapi.components.Storage;
-
 import com.intellij.util.xmlb.XmlSerializerUtil;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 
 /**
  * 持久化
@@ -20,7 +18,7 @@ import org.jetbrains.annotations.Nullable;
         name = "JavaBeanToTypescriptInterfaceSetting",
         storages = @Storage("JavaBeanToTypescriptInterfaceSettingsPlugin.xml")
 )
- public final class JavaBeanToTypescriptInterfaceSettingsState implements PersistentStateComponent<JavaBeanToTypescriptInterfaceSettingsState> {
+public final class JavaBeanToTypescriptInterfaceSettingsState implements PersistentStateComponent<JavaBeanToTypescriptInterfaceSettingsState> {
 
     public String userName = "TheFreeOne";
 
@@ -31,7 +29,6 @@ import org.jetbrains.annotations.Nullable;
     public boolean allowFindClassInAllScope = true;
 
     public boolean ignoreParentField = false;
-
 
 
     public static JavaBeanToTypescriptInterfaceSettingsState getInstance() {

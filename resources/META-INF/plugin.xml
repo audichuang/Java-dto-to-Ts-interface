@@ -1,14 +1,14 @@
 <!-- Plugin Configuration File. Read more: https://plugins.jetbrains.com/docs/intellij/plugin-configuration-file.html -->
 <idea-plugin>
-  <id>org.freeone.javabean.tsinterface</id>
-  <name>Java Bean 2 TS Interface</name>
-  <version>0.2.7</version>
+  <id>org.freeone.javadto.tsinterface</id>
+  <name>Java DTO to TS Interface</name>
+  <version>0.2.8</version>
   <vendor email="free077@qq.com" url="https://github.com/TheFreeOne/Java-Bean-To-Ts-Interface">TheFreeOne</vendor>
 
   <description>
-    Adds support for converting a java bean file to typescript interface file &lt;br/&gt;
-    Usage instructions : After this plugin is installed, right click on a java bean file or a java entity file, click a menu item called '(→ . →) java bean to typescript interface',
-    choose a folder to save the ts interface file, then open the folder and check the result file   &lt;br/&gt;
+    Adds support for converting Java DTO files to TypeScript interface files &lt;br/&gt;
+    Usage instructions : After this plugin is installed, right click on a Java DTO file or a Java entity file, click a menu item called '(→ . →) Java DTO to TypeScript interface',
+    choose a folder to save the TS interface file, then open the folder and check the result file   &lt;br/&gt;
 
 	 &lt;pre&gt;&lt;span class="pl-k"&gt;public&lt;/span&gt; &lt;span class="pl-k"&gt;class&lt;/span&gt; &lt;span class="pl-smi"&gt;TestRequest&lt;/span&gt; {
       &lt;span class="pl-c"&gt;/**&lt;/span&gt;
@@ -41,20 +41,21 @@
   </description>
 
   <change-notes>
-    0.2.7 若字段是接口则unknown;type of filed is interface , as unknown &lt;br/&gt;
-    0.2.6 支持在editor的空白处右键或者在其中的某个类上右键 , support editor or a class in editor popup menu  &lt;br/&gt;
+    0.2.8 更名為 Java DTO to TS Interface，增強對 IntelliJ 2024.3 的支持 &lt;br/&gt;
+    0.2.7 若字段是接口則 unknown;type of filed is interface , as unknown &lt;br/&gt;
+    0.2.6 支持在 editor 的空白處右鍵或者在其中的某個類上右鍵 , support editor or a class in editor popup menu  &lt;br/&gt;
     0.2.5 "byte", "short", "int", "long", "double", "float"  &lt;br/&gt;
-    0.2.4 支持 类型直接是 java.lang.Number  &lt;br/&gt;
+    0.2.4 支持類型直接是 java.lang.Number  &lt;br/&gt;
     0.2.3 &lt;T&gt;  &lt;br/&gt;
     0.2.2 fix classNameWithoutPackage maybe null  &lt;br/&gt;
-    0.2.1 基础泛型处理/Basic generic processing  &lt;br/&gt;
-    0.2.0 重写逻辑/Rewriting  &lt;br/&gt;
-    0.0.18 自定义泛型 &lt;br/&gt;
-    0.0.17 fix: "[]" in doc comment be recognized as an array ;修复在注释中写[]会被错误识别成数组的问题 &lt;br/&gt;
-    0.0.16 @JsonProperty in getter setter + find class in all scope + ignore parent fields 支持@JsonProperty在setter getter上, 支持在all scope中查找类, 支持忽略父类的字段 &lt;br/&gt;
-    0.0.15 fix a problem when using inner public static class  修复使用内部公共静态类时的一个问题 &lt;br/&gt;
-    0.0.14 fix the file name when use inner public static class  修复使用内部公共静态类时的文件名 &lt;br/&gt;
-    0.0.13 support inner public static class 支持内部公共静态类 &lt;br/&gt;
+    0.2.1 基礎泛型處理/Basic generic processing  &lt;br/&gt;
+    0.2.0 重寫邏輯/Rewriting  &lt;br/&gt;
+    0.0.18 自定義泛型 &lt;br/&gt;
+    0.0.17 fix: "[]" in doc comment be recognized as an array ;修復在註釋中寫[]會被錯誤識別成數組的問題 &lt;br/&gt;
+    0.0.16 @JsonProperty in getter setter + find class in all scope + ignore parent fields 支持@JsonProperty在setter getter上, 支持在all scope中查找類, 支持忽略父類的字段 &lt;br/&gt;
+    0.0.15 fix a problem when using inner public static class  修復使用內部公共靜態類時的一個問題 &lt;br/&gt;
+    0.0.14 fix the file name when use inner public static class  修復使用內部公共靜態類時的文件名 &lt;br/&gt;
+    0.0.13 support inner public static class 支持內部公共靜態類 &lt;br/&gt;
     0.0.12 update description &lt;br/&gt;
     0.0.11 enable @JsonProperty, needs to be enabled in setting;  &lt;br/&gt;
     0.0.10 enable Data to String, needs to be enabled in setting &lt;br/&gt;
@@ -70,7 +71,7 @@
   </change-notes>
 
   <!-- please see https://www.jetbrains.org/intellij/sdk/docs/basics/getting_started/build_number_ranges.html for description -->
-  <idea-version since-build="202.0"/>
+  <idea-version since-build="241"/>
 
   <!-- please see https://www.jetbrains.org/intellij/sdk/docs/basics/getting_started/plugin_compatibility.html
        on how to target different products -->
@@ -88,66 +89,61 @@
     <applicationConfigurable
             instance="org.freeone.javabean.tsinterface.setting.JavaBeanToTypescriptInterfaceSettingsConfigurable"
             id="org.freeone.javabean.tsinterface.setting.JavaBeanToTypescriptInterfaceSettingsConfigurable"
-            displayName="Java Bean To Ts Interface Settings"/>
+            displayName="Java DTO To TypeScript Interface Settings"/>
   </extensions>
 
 
   <actions>
-
-
-
-
-
-    <group id="javaBeanToTypescriptInterfaceRightClickMenu" text="(→ . →) Java Bean to Typescript Interface" description="Java bean to typescript interface actions group" popup="true" >
+    <group id="javaBeanToTypescriptInterfaceRightClickMenu" text="(→ . →) Java DTO to TypeScript Interface" description="Java DTO to TypeScript interface actions group" popup="true" >
       <add-to-group group-id="ProjectViewPopupMenuModifyGroup" anchor="last"   />
       <add-to-group group-id="EditorPopupMenu" anchor="last"/>
     </group>
 
-    <group id="javaBeanToTypescriptInterfaceRightClickMenu1" text="1.0/Old Logic" description="旧逻辑" popup="true" >
+    <group id="javaBeanToTypescriptInterfaceRightClickMenu1" text="1.0/Old Logic" description="舊邏輯" popup="true" >
       <add-to-group group-id="javaBeanToTypescriptInterfaceRightClickMenu" anchor="last"   />
     </group>
 
     <action id="JavaBeanToTypescriptInterface"
             class="org.freeone.javabean.tsinterface.JavaBeanToTypescriptInterfaceAction"
             text="Save To File"
-            description="Right click on a java bean file and convert it to a typescript interface and  save to file">
+            description="Right click on a Java DTO file and convert it to a TypeScript interface and save to file">
       <add-to-group group-id="javaBeanToTypescriptInterfaceRightClickMenu1" anchor="first"  />
     </action>
 
-    <!-- 复制到剪切板 -->
+    <!-- 複製到剪貼板 -->
     <action id="JavaBeanToTypescriptInterfaceCopyToClipboard"
             class="org.freeone.javabean.tsinterface.JavaBeanToTypescriptInterfaceAction"
             text="Copy To Clipboard"
-            description="Right click on a java bean file and convert it to a typescript interface and copy to clipboard">
+            description="Right click on a Java DTO file and convert it to a TypeScript interface and copy to clipboard">
       <add-to-group group-id="javaBeanToTypescriptInterfaceRightClickMenu1" anchor="first" />
     </action>
 
     <action id="JavaBeanToTypescriptInterfaceEditAtTextareaToWrapper"
             class="org.freeone.javabean.tsinterface.JavaBeanToTypescriptInterfaceAction"
             text="Edit At Textarea"
-            description="Right click on a java bean file and convert it to a typescript interface and show">
+            description="Right click on a Java DTO file and convert it to a TypeScript interface and show">
       <add-to-group group-id="javaBeanToTypescriptInterfaceRightClickMenu1" anchor="last"  />
     </action>
 
     <action id="JavaBeanToTypescriptInterface2"
             class="org.freeone.javabean.tsinterface.JavaBeanToTypescriptInterfaceAction"
             text="Save To File"
-            description="Right click on a java bean file and convert it to a typescript interface and  save to file 2.0 ">
+            description="Right click on a Java DTO file and convert it to a TypeScript interface and save to file 2.0 ">
       <add-to-group group-id="javaBeanToTypescriptInterfaceRightClickMenu" anchor="first"  />
     </action>
 
-    <!-- 复制到剪切板 -->
+    <!-- 複製到剪貼板 -->
     <action id="JavaBeanToTypescriptInterfaceCopyToClipboard2"
             class="org.freeone.javabean.tsinterface.JavaBeanToTypescriptInterfaceAction"
             text="Copy To Clipboard"
-            description="Right click on a java bean file and convert it to a typescript interface and copy to clipboard  2.0 ">
+            description="Right click on a Java DTO file and convert it to a TypeScript interface and copy to clipboard 2.0 ">
       <add-to-group group-id="javaBeanToTypescriptInterfaceRightClickMenu" relative-to-action="JavaBeanToTypescriptInterface2"  anchor="after"  />
     </action>
 
     <action id="JavaBeanToTypescriptInterfaceEditAtTextareaToWrapper2"
             class="org.freeone.javabean.tsinterface.JavaBeanToTypescriptInterfaceAction"
             text="Edit In Textarea"
-            description="Right click on a java bean file and convert it to a typescript interface and displayed in textarea 2.0 ">
+            description="Right click on a Java DTO file and convert it to a TypeScript interface and displayed in textarea 2.0 ">
       <add-to-group group-id="javaBeanToTypescriptInterfaceRightClickMenu" relative-to-action="JavaBeanToTypescriptInterfaceCopyToClipboard2" anchor="after" />
     </action>
   </actions>

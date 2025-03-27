@@ -45,5 +45,12 @@ tasks {
     patchPluginXml {
         sinceBuild.set("241")
         untilBuild.set("243.*")
+        pluginDescription.set("將 Java DTO 轉換為 TypeScript 接口定義")
+        changeNotes.set("""
+            <ul>
+                <li>更名為 Java-dto-to-Ts-interface</li>
+            </ul>
+        """)
+        pluginId.set("org.freeone.javadto.tsinterface")
     }
 } 

@@ -14,15 +14,15 @@ final class JavaBeanToTypescriptInterfaceSettingsConfigurable implements Configu
 
     private JavaBeanToTypescriptInterfaceComponent mySettingsComponent;
 
-    // A default constructor with no arguments is required because this implementation
+    // A default constructor with no arguments is required because this
+    // implementation
     // is registered in an applicationConfigurable EP
 
     @Nls(capitalization = Nls.Capitalization.Title)
     @Override
     public String getDisplayName() {
-        return "SDK: Application Settings Example";
+        return "Java DTO to TypeScript Interface Settings";
     }
-
 
     @Nullable
     @Override
@@ -50,7 +50,6 @@ final class JavaBeanToTypescriptInterfaceSettingsConfigurable implements Configu
         settings.setAllowFindClassInAllScope(mySettingsComponent.getAllowFindClassInAllScope().isSelected());
         settings.setIgnoreParentField(mySettingsComponent.getIgnoreParentField().isSelected());
     }
-
 
     @Override
     public void reset() {

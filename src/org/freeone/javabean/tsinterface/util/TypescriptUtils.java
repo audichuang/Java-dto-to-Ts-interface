@@ -21,20 +21,6 @@ import java.util.stream.Collectors;
 public class TypescriptUtils {
 
     /**
-     * 记录通过canonicalText查找次数的记录
-     */
-    private static Map<String, Integer> canonicalText2findClassTimeMap = new HashMap<>(8);
-    /**
-     * 属性对应的类对应在json中的等级，属性的类的等级更大
-     */
-    private static Map<String, Integer> canonicalText2TreeLevel = new HashMap<>(8);
-
-    /**
-     * 属性类对应的interface的内容
-     */
-    private static Map<String, String> canonicalText2TInnerClassInterfaceContent = new HashMap<>(8);
-
-    /**
      * 冒号
      */
     public static final String REQUIRE_SPLIT_TAG = ": ";
@@ -42,6 +28,18 @@ public class TypescriptUtils {
      * 问好+冒号
      */
     public static final String NOT_REQUIRE_SPLIT_TAG = "?: ";
+    /**
+     * 记录通过canonicalText查找次数的记录
+     */
+    private static Map<String, Integer> canonicalText2findClassTimeMap = new HashMap<>(8);
+    /**
+     * 属性对应的类对应在json中的等级，属性的类的等级更大
+     */
+    private static Map<String, Integer> canonicalText2TreeLevel = new HashMap<>(8);
+    /**
+     * 属性类对应的interface的内容
+     */
+    private static Map<String, String> canonicalText2TInnerClassInterfaceContent = new HashMap<>(8);
 
     /**
      * 移除多余的缓存
@@ -246,7 +244,7 @@ public class TypescriptUtils {
 
             //  2023-12-26 判断是或否使用JsonProperty
             if (JavaBeanToTypescriptInterfaceSettingsState.getInstance().useAnnotationJsonProperty) {
-                String jsonPropertyValue =CommonUtils.getJsonPropertyValue(fieldItem, allMethods);
+                String jsonPropertyValue = CommonUtils.getJsonPropertyValue(fieldItem, allMethods);
                 if (jsonPropertyValue != null) {
                     fieldName = jsonPropertyValue;
                 }
@@ -290,8 +288,6 @@ public class TypescriptUtils {
         // end of class
         interfaceContent.append("}\n");
     }
-
-
 
 
     private static void processDocComment(StringBuilder interfaceContent, PsiField fieldItem) {
@@ -380,7 +376,7 @@ public class TypescriptUtils {
             if (psiClass == null) {
                 // 2024-11-30 特殊处理，自定义泛型
                 PsiType type = fieldItem.getType();
-                if (type instanceof PsiClassReferenceType ) {
+                if (type instanceof PsiClassReferenceType) {
                     PsiClassReferenceType psiClassReferenceType = (PsiClassReferenceType) type;
                     psiClass = psiClassReferenceType.resolve();
                     canonicalText = psiClass.getQualifiedName();

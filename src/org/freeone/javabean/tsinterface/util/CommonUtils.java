@@ -30,14 +30,14 @@ public class CommonUtils {
     public static final List<String> numberTypes = Arrays.asList("byte", "short", "int", "long", "double", "float");
 
     public static final List<String> requireAnnotationShortNameList = Arrays.asList("NotNull", "NotEmpty", "NotBlank");
-
+    private static ExecutorService cachedThreadPool;
 
     public static boolean isNumberType(PsiType psiType) {
         return numberTypes.contains(psiType.getCanonicalText()) || "java.lang.Number".equalsIgnoreCase(psiType.getCanonicalText()) || Arrays.stream(psiType.getSuperTypes()).anyMatch(ele -> "java.lang.Number".equalsIgnoreCase(ele.getCanonicalText()));
     }
 
     public static boolean isStringType(PsiType psiType) {
-        return "char".equalsIgnoreCase(psiType.getCanonicalText()) ||  Arrays.stream(psiType.getSuperTypes()).anyMatch(ele -> "java.lang.CharSequence".equalsIgnoreCase(ele.getCanonicalText()));
+        return "char".equalsIgnoreCase(psiType.getCanonicalText()) || Arrays.stream(psiType.getSuperTypes()).anyMatch(ele -> "java.lang.CharSequence".equalsIgnoreCase(ele.getCanonicalText()));
     }
 
     public static PsiClass findPsiClass(Project project, PsiType vType) {
@@ -49,7 +49,6 @@ public class CommonUtils {
         }
         return psiClass;
     }
-
 
     /**
      * 判断是否是 基类
@@ -142,7 +141,6 @@ public class CommonUtils {
         return false;
     }
 
-
     public static boolean isMap(PsiField field) {
         String canonicalText = field.getType().getCanonicalText();
         if (canonicalText.contains("java.util.Map<")) {
@@ -161,11 +159,9 @@ public class CommonUtils {
         return psiType.getCanonicalText().contains("java.util.Map") || Arrays.stream(psiType.getSuperTypes()).filter(superType -> superType.getCanonicalText().contains("java.util.Map")).count() > 0;
     }
 
-
     public static boolean isJavaUtilDateType(PsiType psiType) {
         return psiType.getCanonicalText().equals("java.util.Date");
     }
-
 
     public static boolean isBooleanType(PsiType psiType) {
         String canonicalText = psiType.getCanonicalText();
@@ -175,7 +171,6 @@ public class CommonUtils {
             return false;
         }
     }
-
 
     /**
      * 判断字段是否是必须的
@@ -204,8 +199,6 @@ public class CommonUtils {
         }
         return false;
     }
-
-    private static ExecutorService cachedThreadPool;
 
 //    private static final String baseDir = "/home/patrick/tmp";
 //    private static final String sourceFile = "TestClass.java";

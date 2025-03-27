@@ -34,11 +34,11 @@ import java.nio.charset.StandardCharsets;
 import java.util.Optional;
 
 /**
- * 原来的保存到文件
+ * 將 Java DTO 轉換為 TypeScript 接口
  */
 public class JavaBeanToTypescriptInterfaceAction extends AnAction {
 
-    private final NotificationGroup notificationGroup = new NotificationGroup("JavaBeanToTypescriptInterface",
+    private final NotificationGroup notificationGroup = new NotificationGroup("JavaDtoToTypescriptInterface",
             NotificationDisplayType.STICKY_BALLOON, true);
 
     @Override
@@ -63,7 +63,7 @@ public class JavaBeanToTypescriptInterfaceAction extends AnAction {
         if (virtualFiles != null && virtualFiles.length == 1) {
             VirtualFile target = virtualFiles[0];
             if (target.isDirectory()) {
-                Messages.showInfoMessage("Please choose a Java Bean file !", "");
+                Messages.showInfoMessage("Please choose a Java file !", "");
                 return;
             }
             PsiManager psiMgr = PsiManager.getInstance(project);
@@ -73,17 +73,17 @@ public class JavaBeanToTypescriptInterfaceAction extends AnAction {
                 return;
             }
             PsiElement psiElement = e.getData(PlatformDataKeys.PSI_ELEMENT);
-            // 当在editor右键的时候psiElement 可能是null的
+            // 當在 editor 右鍵的時候 psiElement 可能是 null 的
             if ("EditorPopup".equalsIgnoreCase(e.getPlace())) {
 
                 // psiElement may be null
-                // 在 filed 上右键选择其所属弗雷
+                // 在 field 上右鍵選擇其所屬類
                 if (psiElement instanceof PsiField || psiElement instanceof PsiMethod) {
                     if (psiElement.getParent() != null && psiElement.getParent() instanceof PsiClass) {
                         psiElement = psiElement.getParent();
                     }
                 } else if (!(psiElement instanceof PsiClass)) {
-                    // psiElement 可能是null的， 这个警告是因为null也不要是psiClass的实例但是这个要知道psiElement 可能是null
+                    // psiElement 可能是 null 的
                     PsiJavaFile psiJavaFile = (PsiJavaFile) file;
                     PsiClass[] classes = psiJavaFile.getClasses();
                     if (classes.length != 0) {
@@ -92,7 +92,7 @@ public class JavaBeanToTypescriptInterfaceAction extends AnAction {
                 } else if (psiElement instanceof PsiExtensibleClass) {
                     PsiExtensibleClass psiExtensibleClass = (PsiExtensibleClass) psiElement;
                     JvmClassKind classKind = psiExtensibleClass.getClassKind();
-                    // 注解
+                    // 註解
                     if (classKind == JvmClassKind.ANNOTATION) {
                         PsiJavaFile psiJavaFile = (PsiJavaFile) file;
                         PsiClass[] classes = psiJavaFile.getClasses();
@@ -137,7 +137,7 @@ public class JavaBeanToTypescriptInterfaceAction extends AnAction {
                             SampleDialogWrapper sampleDialogWrapper = new SampleDialogWrapper();
                             boolean b = sampleDialogWrapper.showAndGet();
                             if (b) {
-                                // 只有内部public static class 会执行这一步psiClass
+                                // 只有內部 public static class 會執行這一步
                                 String interfaceContent = TypescriptUtils
                                         .generatorInterfaceContentForPsiClassElement(project, psiClass, needSaveToFile);
                                 generateTypescriptContent(e, project, needSaveToFile, psiClass.getName(),
@@ -147,8 +147,8 @@ public class JavaBeanToTypescriptInterfaceAction extends AnAction {
                         }
                     }
 
-                    // 正常情况下
-                    // 声明文件的主要内容 || content of *.d.ts
+                    // 正常情況下
+                    // 聲明文件的主要內容 || content of *.d.ts
                     String interfaceContent = TypescriptUtils.generatorInterfaceContentForPsiJavaFile(project,
                             psiJavaFile, needSaveToFile);
                     generateTypescriptContent(e, project, needSaveToFile,
@@ -158,12 +158,12 @@ public class JavaBeanToTypescriptInterfaceAction extends AnAction {
             }
 
         } else {
-            Messages.showInfoMessage("Please choose a Java Bean", "");
+            Messages.showInfoMessage("Please choose a Java", "");
         }
     }
 
     /**
-     * 针对interfaceContent进行处理，生成内容生成内容
+     * 處理 interfaceContent，生成內容
      *
      * @param e
      * @param project
@@ -172,7 +172,7 @@ public class JavaBeanToTypescriptInterfaceAction extends AnAction {
      * @param interfaceContent
      */
     private void generateTypescriptContent(AnActionEvent e, Project project, boolean saveToFile, String fileNameToSave,
-            String interfaceContent) {
+                                           String interfaceContent) {
         if (saveToFile) {
             FileChooserDescriptor chooserDescriptor = CommonUtils.createFileChooserDescriptor("Choose a folder",
                     "The declaration file end with '.d.ts' will be saved in this folder");
@@ -194,9 +194,9 @@ public class JavaBeanToTypescriptInterfaceAction extends AnAction {
             }
         } else {
             try {
-                // 获取当前菜单那的文本
+                // 獲取當前菜單的文本
                 String text = e.getPresentation().getText();
-                // 复制到剪切板
+                // 複製到剪貼板
                 if (text != null && text.toLowerCase().startsWith("copy")) {
                     Clipboard systemClipboard = Toolkit.getDefaultToolkit().getSystemClipboard();
                     Transferable tText = new StringSelection(interfaceContent);
@@ -205,7 +205,7 @@ public class JavaBeanToTypescriptInterfaceAction extends AnAction {
                             NotificationType.INFORMATION);
                     notification.setImportant(false).notify(project);
                 } else {
-                    // 在textarea进行编辑展示
+                    // 在文本區域顯示編輯
                     TypescriptInterfaceShowerWrapper typescriptInterfaceShowerWrapper = new TypescriptInterfaceShowerWrapper();
                     typescriptInterfaceShowerWrapper.setContent(interfaceContent);
                     typescriptInterfaceShowerWrapper.setOKActionEnabled(false);
