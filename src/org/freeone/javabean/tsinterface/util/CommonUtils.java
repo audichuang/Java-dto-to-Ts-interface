@@ -33,11 +33,15 @@ public class CommonUtils {
     private static ExecutorService cachedThreadPool;
 
     public static boolean isNumberType(PsiType psiType) {
-        return numberTypes.contains(psiType.getCanonicalText()) || "java.lang.Number".equalsIgnoreCase(psiType.getCanonicalText()) || Arrays.stream(psiType.getSuperTypes()).anyMatch(ele -> "java.lang.Number".equalsIgnoreCase(ele.getCanonicalText()));
+        return numberTypes.contains(psiType.getCanonicalText())
+                || "java.lang.Number".equalsIgnoreCase(psiType.getCanonicalText())
+                || Arrays.stream(psiType.getSuperTypes())
+                        .anyMatch(ele -> "java.lang.Number".equalsIgnoreCase(ele.getCanonicalText()));
     }
 
     public static boolean isStringType(PsiType psiType) {
-        return "char".equalsIgnoreCase(psiType.getCanonicalText()) || Arrays.stream(psiType.getSuperTypes()).anyMatch(ele -> "java.lang.CharSequence".equalsIgnoreCase(ele.getCanonicalText()));
+        return "char".equalsIgnoreCase(psiType.getCanonicalText()) || Arrays.stream(psiType.getSuperTypes())
+                .anyMatch(ele -> "java.lang.CharSequence".equalsIgnoreCase(ele.getCanonicalText()));
     }
 
     public static PsiClass findPsiClass(Project project, PsiType vType) {
@@ -134,7 +138,9 @@ public class CommonUtils {
             return true;
         }
         PsiType[] superTypes = type.getSuperTypes();
-        List<PsiType> collect = Arrays.stream(superTypes).filter(superType -> superType.getCanonicalText().contains("java.util.Collection<")).collect(Collectors.toList());
+        List<PsiType> collect = Arrays.stream(superTypes)
+                .filter(superType -> superType.getCanonicalText().contains("java.util.Collection<"))
+                .collect(Collectors.toList());
         if (!collect.isEmpty()) {
             return true;
         }
@@ -147,7 +153,9 @@ public class CommonUtils {
             return true;
         } else {
             PsiType[] superTypes = field.getType().getSuperTypes();
-            List<PsiType> collect = Arrays.stream(superTypes).filter(superType -> superType.getCanonicalText().contains("java.util.Map<")).collect(Collectors.toList());
+            List<PsiType> collect = Arrays.stream(superTypes)
+                    .filter(superType -> superType.getCanonicalText().contains("java.util.Map<"))
+                    .collect(Collectors.toList());
             if (!collect.isEmpty()) {
                 return true;
             }
@@ -156,7 +164,8 @@ public class CommonUtils {
     }
 
     public static boolean isMapType(PsiType psiType) {
-        return psiType.getCanonicalText().contains("java.util.Map") || Arrays.stream(psiType.getSuperTypes()).filter(superType -> superType.getCanonicalText().contains("java.util.Map")).count() > 0;
+        return psiType.getCanonicalText().contains("java.util.Map") || Arrays.stream(psiType.getSuperTypes())
+                .filter(superType -> superType.getCanonicalText().contains("java.util.Map")).count() > 0;
     }
 
     public static boolean isJavaUtilDateType(PsiType psiType) {
@@ -200,17 +209,16 @@ public class CommonUtils {
         return false;
     }
 
-//    private static final String baseDir = "/home/patrick/tmp";
-//    private static final String sourceFile = "TestClass.java";
+    // private static final String baseDir = "/home/patrick/tmp";
+    // private static final String sourceFile = "TestClass.java";
 
-
-//    public static void main(String[] args) throws IOException {
-//        PsiFileFactory psiFileFactory = createPsiFactory();
-//        File file = new File(baseDir, sourceFile);
-//        String javaSource = FileUtil.loadFile(file);
-//        FileASTNode node = parseJavaSource(javaSource, psiFileFactory);
-//
-//    }
+    // public static void main(String[] args) throws IOException {
+    // PsiFileFactory psiFileFactory = createPsiFactory();
+    // File file = new File(baseDir, sourceFile);
+    // String javaSource = FileUtil.loadFile(file);
+    // FileASTNode node = parseJavaSource(javaSource, psiFileFactory);
+    //
+    // }
 
     /**
      * 解析java文件
@@ -235,7 +243,7 @@ public class CommonUtils {
         PsiFile psiFile = psiFileFactory.createFileFromText("__dummy_file__.java", JavaFileType.INSTANCE, JAVA_SOURCE);
 
         if (psiFile instanceof PsiJavaFile) {
-//        return psiJavaFile.getNode();
+            // return psiJavaFile.getNode();
             return (PsiJavaFile) psiFile;
         } else {
             throw new RuntimeException("Target is not a valid java file");
@@ -243,24 +251,52 @@ public class CommonUtils {
     }
 
     private static MockProject createProject() {
-        JavaCoreProjectEnvironment environment = new JavaCoreProjectEnvironment(new Disposable() {
-            @Override
-            public void dispose() {
-            }
-        }, new JavaCoreApplicationEnvironment(new Disposable() {
-            @Override
-            public void dispose() {
-            }
-        }));
-
+        JavaCoreProjectEnvironment environment = new JavaCoreProjectEnvironment(getDisposable(),
+                new JavaCoreApplicationEnvironment(getDisposable()));
         return environment.getProject();
+    }
+
+    // 統一的 Disposable 實例，確保資源正確釋放
+    private static Disposable disposable;
+
+    /**
+     * 獲取或創建一個 Disposable 實例
+     * 這個方法保證了我們總是使用同一個 Disposable 實例，方便統一管理和釋放資源
+     */
+    public static synchronized Disposable getDisposable() {
+        if (disposable == null) {
+            disposable = new Disposable() {
+                @Override
+                public void dispose() {
+                    // 在這裡進行資源清理
+                    if (cachedThreadPool != null && !cachedThreadPool.isShutdown()) {
+                        cachedThreadPool.shutdown();
+                        cachedThreadPool = null;
+                    }
+                    System.out.println("Disposable 已釋放資源");
+                }
+
+                @Override
+                public String toString() {
+                    return "CommonUtilsDisposable";
+                }
+            };
+        }
+        return disposable;
     }
 
     public static synchronized ExecutorService getCachedThreadPool() {
         if (cachedThreadPool == null) {
-            cachedThreadPool = Executors.newCachedThreadPool();
+            // 創建有限大小的線程池，避免無限制地創建線程
+            cachedThreadPool = new ThreadPoolExecutor(
+                    1, // 核心線程數
+                    Math.max(Runtime.getRuntime().availableProcessors(), 4), // 最大線程數不低於 4
+                    60L, // 空閒線程存活時間
+                    TimeUnit.SECONDS, // 時間單位
+                    new LinkedBlockingQueue<>(100), // 有界隊列
+                    new ThreadPoolExecutor.CallerRunsPolicy() // 拒絕策略：在調用者線程中執行
+            );
         }
-        ThreadPoolExecutor threadPoolExecutor = new ThreadPoolExecutor(1, Integer.MAX_VALUE, 0L, TimeUnit.SECONDS, new LinkedBlockingQueue<>(100));
         return cachedThreadPool;
     }
 
@@ -290,7 +326,8 @@ public class CommonUtils {
             PsiClass mainClass = classes[0];
             String mainClassQualifiedName = mainClass.getQualifiedName();
             // 内部的public static class和外面的public class肯定不同
-            if (targetQualifiedName != null && mainClassQualifiedName != null && !targetQualifiedName.equals(mainClassQualifiedName)) {
+            if (targetQualifiedName != null && mainClassQualifiedName != null
+                    && !targetQualifiedName.equals(mainClassQualifiedName)) {
                 PsiClass[] innerClasses = mainClass.getInnerClasses();
                 for (PsiClass innerClass : innerClasses) {
                     String qualifiedNameOfInnerClass = innerClass.getQualifiedName();
@@ -338,7 +375,8 @@ public class CommonUtils {
         // 从方法中获取
         if (result == null) {
             for (PsiMethod method : allMethods) {
-                if (method.getName().equalsIgnoreCase(getterMethodName) || method.getName().equalsIgnoreCase(setterMethodName)) {
+                if (method.getName().equalsIgnoreCase(getterMethodName)
+                        || method.getName().equalsIgnoreCase(setterMethodName)) {
                     PsiAnnotation[] methodAnnotations = method.getAnnotations();
                     for (PsiAnnotation annotation : methodAnnotations) {
                         if (result != null) {
@@ -348,9 +386,11 @@ public class CommonUtils {
                         if (annotation instanceof PsiAnnotationImpl) {
                             PsiAnnotationImpl psiAnnotationImpl = (PsiAnnotationImpl) annotation;
                             String qualifiedName = psiAnnotationImpl.getQualifiedName();
-                            if (qualifiedName != null && qualifiedName.equals("com.fasterxml.jackson.annotation.JsonProperty")) {
+                            if (qualifiedName != null
+                                    && qualifiedName.equals("com.fasterxml.jackson.annotation.JsonProperty")) {
                                 for (JvmAnnotationAttribute attribute : psiAnnotationImpl.getAttributes()) {
-                                    if ("value".equals(attribute.getAttributeName()) && attribute.getAttributeValue() != null) {
+                                    if ("value".equals(attribute.getAttributeName())
+                                            && attribute.getAttributeValue() != null) {
                                         if (attribute instanceof PsiNameValuePairImpl) {
                                             PsiNameValuePairImpl psiNameValuePair = (PsiNameValuePairImpl) attribute;
                                             String literalValue = psiNameValuePair.getLiteralValue();
@@ -372,7 +412,6 @@ public class CommonUtils {
                 }
             }
         }
-
 
         return result;
     }
@@ -404,7 +443,7 @@ public class CommonUtils {
         // 如果有泛型参数，构造出类似 List<T> 形式
         if (typeParametersInClass.length > 0) {
             StringBuilder builder = new StringBuilder();
-            builder.append(classNameWithoutPackage.substring(classNameWithoutPackage.lastIndexOf('.') + 1))  // 取类名部分
+            builder.append(classNameWithoutPackage.substring(classNameWithoutPackage.lastIndexOf('.') + 1)) // 取类名部分
                     .append("<");
             for (int i = 0; i < typeParametersInClass.length; i++) {
                 // 泛型占位符 T 或具体类型

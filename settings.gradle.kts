@@ -1,1 +1,1 @@
-rootProject.name = "Java-Bean-To-Ts-Interface" 
+rootProject.name = "Java-dto-to-Ts-interface" 

@@ -5,7 +5,7 @@ plugins {
 }
 
 group = "org.freeone.javabean.tsinterface"
-version = "0.2.8"
+version = "0.2.9"
 
 java {
     sourceCompatibility = JavaVersion.VERSION_17
@@ -57,13 +57,8 @@ tasks {
         changeNotes.set("""
             <ul>
                 <li>0.2.8: 改進 Alt+Enter 意圖操作，提供保存、複製和編輯選項</li>
-                <li>0.2.7: 更名為 Java-dto-to-Ts-interface</li>
             </ul>
         """)
         pluginId.set("org.freeone.javadto.tsinterface")
     }
-    
-    // runIde {
-    //     jvmArgs("-Xmx2g")
-    // }
 } 

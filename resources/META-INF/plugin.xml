@@ -3,7 +3,7 @@
   <id>org.freeone.javadto.tsinterface</id>
   <name>Java DTO to TS Interface</name>
   <version>0.2.9</version>
-  <vendor email="audichuang@gmail.com" url="https://github.com/AudiChuang/Java-Bean-To-Ts-Interface">AudiChuang</vendor>
+  <vendor email="audichuang@gmail.com" url="https://github.com/AudiChuang/Java-dto-to-Ts-interface">AudiChuang</vendor>
 
   <description>
     Adds support for converting Java DTO files to TypeScript interface files &lt;br/&gt;
@@ -37,7 +37,7 @@
       &lt;span class="pl-c1"&gt;isSuccess&lt;/span&gt;?: &lt;span class="pl-smi"&gt;boolean&lt;/span&gt;
       &lt;span class="pl-kos"&gt;}&lt;/span&gt;&lt;/pre&gt;
 
-    &lt;a href="https://github.com/AudiChuang/Java-Bean-To-Ts-Interface/blob/main/README.md" target="_blank"&gt;more information&lt;/a&gt;
+    &lt;a href="https://github.com/AudiChuang/Java-dto-to-Ts-interface/blob/main/README.md" target="_blank"&gt;more information&lt;/a&gt;
     
     &lt;p&gt;本專案基於 &lt;a href="https://github.com/TheFreeOne/Java-Bean-To-Ts-Interface" target="_blank"&gt;TheFreeOne&lt;/a&gt; 的開源專案修改而來，特此感謝原作者的貢獻。&lt;/p&gt;
     &lt;p&gt;本專案遵循 MIT 許可證發布。&lt;br/&gt;

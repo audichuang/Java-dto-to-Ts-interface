@@ -2,10 +2,8 @@ package org.freeone.javabean.tsinterface;
 
 import com.intellij.lang.jvm.JvmClassKind;
 import com.intellij.notification.Notification;
-import com.intellij.notification.NotificationDisplayType;
 import com.intellij.notification.NotificationGroupManager;
 import com.intellij.notification.NotificationType;
-import com.intellij.notification.NotificationGroupManager;
 import com.intellij.openapi.actionSystem.AnAction;
 import com.intellij.openapi.actionSystem.AnActionEvent;
 import com.intellij.openapi.actionSystem.PlatformDataKeys;
@@ -40,6 +38,7 @@ import java.util.Optional;
  */
 public class JavaBeanToTypescriptInterfaceAction extends AnAction {
 
+    // 使用新的 NotificationGroupManager API 獲取通知組
     private final com.intellij.notification.NotificationGroup notificationGroup = NotificationGroupManager.getInstance()
             .getNotificationGroup("JavaDtoToTypescriptInterface");
 

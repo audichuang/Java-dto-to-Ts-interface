@@ -93,14 +93,17 @@ public class GenerateDtoTsInterfaceIntention extends PsiElementBaseIntentionActi
                             @Override
                             public @Nullable PopupStep<?> onChosen(String selectedValue, boolean finalChoice) {
                                 return doFinalStep(() -> {
-                                    if (selectedValue.equals("保存到文件")) {
-                                        DtoTypescriptGeneratorService.saveToFiles(project, finalContentMap);
-                                    } else if (selectedValue.equals("複製到剪貼板")) {
-                                        copyToClipboard(project, mergedContent);
-                                    } else if (selectedValue.equals("在文本框中編輯")) {
-                                        // 使用帶有類名支持的顯示方法
-                                        DtoTypescriptGeneratorService.showInTextEditor(project, finalContentMap);
-                                    }
+                                    // 使用 invokeLater 確保 UI 操作在 EDT 上執行，並且在 popup 關閉後執行
+                                    ApplicationManager.getApplication().invokeLater(() -> {
+                                        if (selectedValue.equals("保存到文件")) {
+                                            DtoTypescriptGeneratorService.saveToFiles(project, finalContentMap);
+                                        } else if (selectedValue.equals("複製到剪貼板")) {
+                                            copyToClipboard(project, mergedContent);
+                                        } else if (selectedValue.equals("在文本框中編輯")) {
+                                            // 使用帶有類名支持的顯示方法
+                                            DtoTypescriptGeneratorService.showInTextEditor(project, finalContentMap);
+                                        }
+                                    });
                                 });
                             }
                         });
@@ -142,7 +145,7 @@ public class GenerateDtoTsInterfaceIntention extends PsiElementBaseIntentionActi
             final String finalContent = content;
 
             // 使用獨立的線程安全方式顯示
-            SwingUtilities.invokeLater(() -> {
+            ApplicationManager.getApplication().invokeLater(() -> {
                 TypescriptInterfaceShowerWrapper wrapper = new TypescriptInterfaceShowerWrapper();
                 wrapper.setContent(finalContent);
 

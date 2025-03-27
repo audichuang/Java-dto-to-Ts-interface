@@ -141,35 +141,70 @@ public class TypescriptInterfaceShowerWrapper extends DialogWrapper {
 
     @Override
     public void show() {
+        // 檢查是否已經顯示或已被銷毀
+        if (isShowing() || isDisposed()) {
+            System.out.println("窗口已顯示或已被銷毀，無需再次顯示");
+            return;
+        }
+
         try {
-            // 調用父類方法
-            super.show();
-
-            // 獲取當前窗口
-            Window window = getWindow();
-            if (window != null) {
-                // 確保窗口在前台
-                window.toFront();
-                window.setAlwaysOnTop(true);
-                window.setAlwaysOnTop(false);
-                window.requestFocus();
-
-                // 記錄窗口狀態
-                System.out.println("窗口狀態: 可見=" + window.isVisible() +
-                        ", 顯示=" + window.isShowing() +
-                        ", 尺寸=" + window.getWidth() + "x" + window.getHeight());
-            } else {
-                System.err.println("警告：找不到窗口引用");
-            }
+            // 使用 ApplicationManager 確保在正確的模態狀態下執行
+            // 使用 getModalityStateForComponent 獲取當前窗口的模態狀態，避免使用 ANY
+            com.intellij.openapi.application.ApplicationManager.getApplication().invokeAndWait(() -> {
+                try {
+                    // 調用父類方法顯示對話框
+                    super.show();
+                } catch (Exception e) {
+                    System.err.println("顯示窗口時發生錯誤: " + e.getMessage());
+                    e.printStackTrace();
+                }
+            }, com.intellij.openapi.application.ModalityState.defaultModalityState());
         } catch (Exception e) {
             e.printStackTrace();
             System.err.println("顯示窗口時發生錯誤: " + e.getMessage());
+            close(CANCEL_EXIT_CODE);
+        }
+    }
+
+    /**
+     * 自定義窗口關閉處理
+     */
+    @Override
+    public void doCancelAction() {
+        try {
+            // 先標記為已處理
+            if (isDisposed()) {
+                return;
+            }
+
+            // 使用 ApplicationManager 確保在 EDT 線程中執行
+            com.intellij.openapi.application.ApplicationManager.getApplication().invokeLater(() -> {
+                try {
+                    // 調用父類方法關閉窗口
+                    super.doCancelAction();
+                } catch (Exception e) {
+                    System.err.println("關閉窗口時發生錯誤: " + e.getMessage());
+                    e.printStackTrace();
+                    // 強制關閉
+                    try {
+                        close(CANCEL_EXIT_CODE);
+                    } catch (Exception ex) {
+                        // 忽略
+                    }
+                }
+            }, com.intellij.openapi.application.ModalityState.defaultModalityState());
+        } catch (Exception e) {
+            System.err.println("關閉窗口時發生錯誤: " + e.getMessage());
+            e.printStackTrace();
         }
     }
 
     protected class CustomerCloseAction extends DialogWrapperAction {
 
         private final TypescriptInterfaceShowerWrapper wrapper;
+        // 使用原子變量追蹤處理狀態，避免重複處理
+        private final java.util.concurrent.atomic.AtomicBoolean processed = new java.util.concurrent.atomic.AtomicBoolean(
+                false);
 
         protected CustomerCloseAction(TypescriptInterfaceShowerWrapper wrapper) {
             super("複製並關閉");
@@ -178,43 +213,116 @@ public class TypescriptInterfaceShowerWrapper extends DialogWrapper {
 
         @Override
         protected void doAction(ActionEvent actionEvent) {
-            ApplicationManager.getApplication().invokeLater(() -> {
+            // 確保只執行一次
+            if (processed.getAndSet(true)) {
+                return;
+            }
+
+            // 使用 ApplicationManager 確保在 EDT 線程中執行
+            com.intellij.openapi.application.ApplicationManager.getApplication().invokeLater(() -> {
+                // 先檢查內容是否包含 any 類型，如果包含則顯示確認對話框
                 try {
-                    // 獲取文本
-                    String text = typescriptInterfaceContentDisplayPanel.getTextArea().getText();
-                    if (text != null && !text.isEmpty()) {
-                        // 檢查內容是否包含 any 類型
-                        if (text.contains(": any") || text.contains("?: any")) {
-                            int result = JOptionPane.showConfirmDialog(
-                                    null,
-                                    "內容中存在未知類型(any)，建議手動檢查並修改。是否仍要複製？",
-                                    "類型警告",
-                                    JOptionPane.YES_NO_OPTION,
-                                    JOptionPane.WARNING_MESSAGE);
+                    JTextArea textArea = typescriptInterfaceContentDisplayPanel.getTextArea();
+                    if (textArea == null) {
+                        System.err.println("文本區域為空");
+                        safeCancelAction();
+                        return;
+                    }
 
-                            if (result != JOptionPane.YES_OPTION) {
-                                return;
-                            }
+                    String text = textArea.getText();
+                    if (text == null || text.isEmpty()) {
+                        System.out.println("內容為空，無需複製");
+                        safeCancelAction();
+                        return;
+                    }
+
+                    // 檢查內容是否包含 any 類型
+                    if (text.contains(": any") || text.contains("?: any")) {
+                        // 直接使用 JOptionPane 的靜態方法，不再使用父組件
+                        // 避免與已關閉窗口相關的對話框顯示問題
+                        final int result = JOptionPane.showConfirmDialog(
+                                null, // 使用 null 作為父組件，避免引用已關閉的窗口
+                                "內容中存在未知類型(any)，建議手動檢查並修改。是否仍要複製？",
+                                "類型警告",
+                                JOptionPane.YES_NO_OPTION,
+                                JOptionPane.WARNING_MESSAGE);
+
+                        if (result != JOptionPane.YES_OPTION) {
+                            // 用戶選擇否，重置處理狀態，允許再次嘗試
+                            processed.set(false);
+                            return;
+                        } else {
+                            // 用戶選擇是，執行複製操作
+                            performCopyAndClose(text);
                         }
-
-                        // 複製到剪貼板
-                        Clipboard systemClipboard = Toolkit.getDefaultToolkit().getSystemClipboard();
-                        Transferable tText = new StringSelection(text);
-                        systemClipboard.setContents(tText, null);
-
-                        // 顯示日誌而不是彈窗
-                        System.out.println("已複製 " + text.length() + " 個字符到剪貼板");
-
-                        // 可以選擇使用狀態欄通知，但要避免彈窗
-                        // 只在控制台輸出日誌
+                    } else {
+                        // 內容不包含 any，直接執行複製操作
+                        performCopyAndClose(text);
                     }
                 } catch (Exception ex) {
-                    System.err.println("複製失敗: " + ex.getMessage());
+                    System.err.println("操作過程中發生錯誤: " + ex.getMessage());
                     ex.printStackTrace();
-                } finally {
-                    wrapper.doCancelAction();
+                    safeCancelAction();
                 }
-            });
+            }, com.intellij.openapi.application.ModalityState.defaultModalityState());
+        }
+
+        /**
+         * 執行複製到剪貼板並關閉窗口的操作
+         */
+        private void performCopyAndClose(String text) {
+            try {
+                // 複製到剪貼板
+                Clipboard systemClipboard = Toolkit.getDefaultToolkit().getSystemClipboard();
+                Transferable tText = new StringSelection(text);
+                systemClipboard.setContents(tText, null);
+
+                // 顯示日誌而不是彈窗
+                System.out.println("已複製 " + text.length() + " 個字符到剪貼板");
+
+                // 使用 ApplicationManager 確保在 EDT 線程中執行關閉操作
+                com.intellij.openapi.application.ApplicationManager.getApplication().invokeLater(() -> {
+                    // 關閉對話框
+                    try {
+                        wrapper.close(DialogWrapper.OK_EXIT_CODE);
+                    } catch (Exception e) {
+                        // 如果關閉失敗，嘗試替代方法
+                        System.err.println("關閉窗口失敗，嘗試替代方法: " + e.getMessage());
+                        try {
+                            wrapper.dispose();
+                        } catch (Exception ex) {
+                            // 最後嘗試
+                            System.err.println("無法釋放資源: " + ex.getMessage());
+                        }
+                    }
+                }, com.intellij.openapi.application.ModalityState.defaultModalityState());
+            } catch (Exception ex) {
+                System.err.println("複製失敗: " + ex.getMessage());
+                ex.printStackTrace();
+                safeCancelAction();
+            }
+        }
+
+        /**
+         * 安全地關閉窗口
+         */
+        private void safeCancelAction() {
+            com.intellij.openapi.application.ApplicationManager.getApplication().invokeLater(() -> {
+                try {
+                    if (!wrapper.isDisposed()) {
+                        wrapper.close(DialogWrapper.CANCEL_EXIT_CODE);
+                    }
+                } catch (Exception ex) {
+                    System.err.println("關閉窗口失敗: " + ex.getMessage());
+                    ex.printStackTrace();
+                    // 嘗試替代方法
+                    try {
+                        wrapper.dispose();
+                    } catch (Exception e) {
+                        // 忽略
+                    }
+                }
+            }, com.intellij.openapi.application.ModalityState.defaultModalityState());
         }
     }
 }
