@@ -2,8 +2,8 @@
 <idea-plugin>
   <id>org.freeone.javadto.tsinterface</id>
   <name>Java DTO to TS Interface</name>
-  <version>0.2.8</version>
-  <vendor email="free077@qq.com" url="https://github.com/TheFreeOne/Java-Bean-To-Ts-Interface">TheFreeOne</vendor>
+  <version>0.2.9</version>
+  <vendor email="audichuang@gmail.com" url="https://github.com/AudiChuang/Java-Bean-To-Ts-Interface">AudiChuang</vendor>
 
   <description>
     Adds support for converting Java DTO files to TypeScript interface files &lt;br/&gt;
@@ -37,10 +37,16 @@
       &lt;span class="pl-c1"&gt;isSuccess&lt;/span&gt;?: &lt;span class="pl-smi"&gt;boolean&lt;/span&gt;
       &lt;span class="pl-kos"&gt;}&lt;/span&gt;&lt;/pre&gt;
 
-    &lt;a href="https://github.com/TheFreeOne/Java-Bean-To-Ts-Interface/blob/main/README.md" target="_blank"&gt;more information&lt;/a&gt;
+    &lt;a href="https://github.com/AudiChuang/Java-Bean-To-Ts-Interface/blob/main/README.md" target="_blank"&gt;more information&lt;/a&gt;
+    
+    &lt;p&gt;本專案基於 &lt;a href="https://github.com/TheFreeOne/Java-Bean-To-Ts-Interface" target="_blank"&gt;TheFreeOne&lt;/a&gt; 的開源專案修改而來，特此感謝原作者的貢獻。&lt;/p&gt;
+    &lt;p&gt;本專案遵循 MIT 許可證發布。&lt;br/&gt;
+    Copyright (c) 2022 TheFreeOne &lt;br/&gt;
+    Copyright (c) 2024 AudiChuang (modifications)&lt;/p&gt;
   </description>
 
   <change-notes>
+    0.2.9 增加接口排序功能，過濾標準庫類型，優化未知類型處理 &lt;br/&gt;
     0.2.8 更名為 Java DTO to TS Interface，增強對 IntelliJ 2024.3 的支持 &lt;br/&gt;
     0.2.7 若字段是接口則 unknown;type of filed is interface , as unknown &lt;br/&gt;
     0.2.6 支持在 editor 的空白處右鍵或者在其中的某個類上右鍵 , support editor or a class in editor popup menu  &lt;br/&gt;

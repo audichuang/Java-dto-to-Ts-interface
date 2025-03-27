@@ -51,6 +51,9 @@ export default interface TestRequest {
 - 支持 @JsonProperty 註解
 - 支持基本的泛型處理
 - 支持父類字段繼承
+- 支持對生成的 TypeScript 接口進行智能排序
+- 過濾標準庫類型，使用 any 替代
+- 新增未知類型警告提示
 
 ## 設置選項
 
@@ -58,3 +61,20 @@ export default interface TestRequest {
 - 可選擇是否使用 @JsonProperty 註解的值作為字段名
 - 可選擇是否在全局範圍內查找類
 - 可選擇是否忽略父類字段
+
+## 鳴謝與版權
+
+本專案基於 [TheFreeOne](https://github.com/TheFreeOne/Java-Bean-To-Ts-Interface) 的開源專案修改而來，特此感謝原作者的貢獻。
+
+本專案根據 MIT 許可證發布，保留原始版權聲明。使用本專案時，請遵守 MIT 許可證的條款，並在您的專案中適當引用和鳴謝原始作者。
+
+```
+MIT License
+
+Copyright (c) 2022 TheFreeOne
+Copyright (c) 2024 AudiChuang (modifications)
+```
+
+完整的許可證文件和第三方源資訊可在 [LICENSE](LICENSE) 和 [ATTRIBUTIONS.md](ATTRIBUTIONS.md) 檔案中查閱。
+
+如果您對本專案有任何建議或發現問題，歡迎提交 Issue 或 Pull Request。
