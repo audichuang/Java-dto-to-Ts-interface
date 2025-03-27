@@ -231,6 +231,8 @@ public class JavaBeanToTypescriptInterfaceAction extends AnAction {
                             try {
                                 TypescriptInterfaceShowerWrapper typescriptInterfaceShowerWrapper = new TypescriptInterfaceShowerWrapper();
                                 typescriptInterfaceShowerWrapper.setContent(markedContent);
+                                // 設置類名用於建議檔名
+                                typescriptInterfaceShowerWrapper.setClassName(fileNameToSave);
                                 typescriptInterfaceShowerWrapper.show();
 
                                 // 顯示調試信息

@@ -15,19 +15,52 @@ import java.awt.event.ActionEvent;
 public class TypescriptInterfaceShowerWrapper extends DialogWrapper {
 
     private TypescriptInterfaceContentDisplayPanel typescriptInterfaceContentDisplayPanel;
+    private JTextField fileNameField;
+    private String className = "";
 
     public TypescriptInterfaceShowerWrapper() {
         super(true);
         typescriptInterfaceContentDisplayPanel = new TypescriptInterfaceContentDisplayPanel();
         init();
-        setTitle("Ts Interface Content");
-        setSize(600, 700);
+        setTitle("TypeScript 接口內容");
+        setSize(600, 700); // 設置更大的窗口尺寸
     }
 
     @Nullable
     @Override
     protected JComponent createCenterPanel() {
-        return typescriptInterfaceContentDisplayPanel.mainPanel();
+        JPanel mainPanel = new JPanel(new BorderLayout());
+
+        // 創建頂部面板包含建議的檔名文本框和複製按鈕
+        JPanel topPanel = new JPanel(new BorderLayout());
+        topPanel.setBorder(BorderFactory.createEmptyBorder(0, 0, 10, 0));
+
+        JPanel fileNamePanel = new JPanel(new BorderLayout());
+        JLabel fileNameLabel = new JLabel("建議檔名: ");
+        fileNameField = new JTextField();
+        fileNameField.setEditable(false);
+        fileNamePanel.add(fileNameLabel, BorderLayout.WEST);
+        fileNamePanel.add(fileNameField, BorderLayout.CENTER);
+
+        JButton copyFileNameButton = new JButton("複製檔名");
+        copyFileNameButton.addActionListener(e -> {
+            if (fileNameField.getText() != null && !fileNameField.getText().isEmpty()) {
+                Clipboard clipboard = Toolkit.getDefaultToolkit().getSystemClipboard();
+                StringSelection selection = new StringSelection(fileNameField.getText());
+                clipboard.setContents(selection, null);
+                JOptionPane.showMessageDialog(getContentPane(),
+                        "已複製檔名到剪貼板", "複製成功", JOptionPane.INFORMATION_MESSAGE);
+            }
+        });
+
+        topPanel.add(fileNamePanel, BorderLayout.CENTER);
+        topPanel.add(copyFileNameButton, BorderLayout.EAST);
+
+        // 添加主內容面板
+        mainPanel.add(topPanel, BorderLayout.NORTH);
+        mainPanel.add(typescriptInterfaceContentDisplayPanel.mainPanel(), BorderLayout.CENTER);
+
+        return mainPanel;
     }
 
     public void setContent(String interfaceContent) {
@@ -38,6 +71,64 @@ public class TypescriptInterfaceShowerWrapper extends DialogWrapper {
         } else {
             System.err.println("錯誤：面板或內容為空");
         }
+    }
+
+    public void setClassName(String className) {
+        this.className = className;
+        updateFileName();
+    }
+
+    public void addClassName(String className) {
+        if (this.className.isEmpty()) {
+            this.className = className;
+        } else {
+            this.className += ", " + className;
+        }
+        updateFileName();
+    }
+
+    private void updateFileName() {
+        if (fileNameField != null) {
+            String suggestedName = generateFileName();
+            fileNameField.setText(suggestedName);
+        }
+    }
+
+    private String generateFileName() {
+        if (className == null || className.isEmpty()) {
+            return "typescript-interface.d.ts";
+        }
+
+        // 處理多個類名的情況
+        if (className.contains(",")) {
+            String[] classNames = className.split(",");
+            // 檢查是否有明顯的請求/響應對
+            boolean hasRqRs = false;
+            String baseName = null;
+
+            for (String name : classNames) {
+                String trimmedName = name.trim();
+                if (trimmedName.contains("Tranrq") || trimmedName.contains("Tranrs") ||
+                        trimmedName.contains("Request") || trimmedName.contains("Response")) {
+                    hasRqRs = true;
+                    // 提取基本名稱部分
+                    String baseNameCandidate = trimmedName.replaceAll("(Tranrq|Tranrs|Request|Response)$", "");
+                    if (baseName == null) {
+                        baseName = baseNameCandidate;
+                    }
+                }
+            }
+
+            if (hasRqRs && baseName != null) {
+                return baseName.toLowerCase() + ".d.ts";
+            } else {
+                // 如果沒有明顯的請求/響應對，取第一個類名
+                return classNames[0].trim().toLowerCase() + ".d.ts";
+            }
+        }
+
+        // 單個類名
+        return className.toLowerCase() + ".d.ts";
     }
 
     @NotNull

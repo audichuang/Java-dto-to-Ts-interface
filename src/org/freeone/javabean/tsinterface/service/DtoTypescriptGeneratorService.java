@@ -7,9 +7,12 @@ import com.intellij.openapi.project.Project;
 import com.intellij.openapi.ui.Messages;
 import com.intellij.openapi.vfs.VirtualFile;
 import com.intellij.psi.PsiClass;
+import org.freeone.javabean.tsinterface.swing.TypescriptInterfaceShowerWrapper;
 import org.freeone.javabean.tsinterface.util.CommonUtils;
 import org.freeone.javabean.tsinterface.util.TypescriptContentGenerator;
 
+import javax.swing.*;
+import javax.swing.SwingUtilities;
 import java.awt.*;
 import java.awt.datatransfer.Clipboard;
 import java.awt.datatransfer.StringSelection;
@@ -134,6 +137,44 @@ public class DtoTypescriptGeneratorService {
             Notification notification = notificationGroup.createNotification(
                     "已將 " + contentMap.size() + " 個 TypeScript 接口複製到剪貼板", NotificationType.INFORMATION);
             notification.setImportant(false).notify(project);
+        }
+    }
+
+    /**
+     * 在文本編輯器中顯示生成的內容
+     */
+    public static void showInTextEditor(Project project, Map<String, String> contentMap) {
+        if (contentMap != null && !contentMap.isEmpty()) {
+            StringBuilder mergedContent = new StringBuilder();
+
+            // 合併所有內容
+            for (Map.Entry<String, String> entry : contentMap.entrySet()) {
+                String className = entry.getKey();
+                String content = entry.getValue();
+
+                mergedContent.append("// ").append(className).append(".d.ts\n");
+                mergedContent.append(content).append("\n\n");
+            }
+
+            final String finalContent = mergedContent.toString();
+
+            SwingUtilities.invokeLater(() -> {
+                try {
+                    TypescriptInterfaceShowerWrapper wrapper = new TypescriptInterfaceShowerWrapper();
+                    wrapper.setContent(finalContent);
+
+                    // 將所有類名添加到建議檔名
+                    for (String className : contentMap.keySet()) {
+                        wrapper.addClassName(className);
+                    }
+
+                    wrapper.show();
+                } catch (Exception e) {
+                    Messages.showMessageDialog("顯示對話框時發生錯誤: " + e.getMessage(),
+                            "錯誤", Messages.getErrorIcon());
+                    e.printStackTrace();
+                }
+            });
         }
     }
 }

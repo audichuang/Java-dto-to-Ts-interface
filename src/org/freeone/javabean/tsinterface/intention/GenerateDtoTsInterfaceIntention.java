@@ -98,7 +98,8 @@ public class GenerateDtoTsInterfaceIntention extends PsiElementBaseIntentionActi
                                     } else if (selectedValue.equals("複製到剪貼板")) {
                                         copyToClipboard(project, mergedContent);
                                     } else if (selectedValue.equals("在文本框中編輯")) {
-                                        showInTextEditor(mergedContent);
+                                        // 使用帶有類名支持的顯示方法
+                                        DtoTypescriptGeneratorService.showInTextEditor(project, finalContentMap);
                                     }
                                 });
                             }
@@ -143,6 +144,13 @@ public class GenerateDtoTsInterfaceIntention extends PsiElementBaseIntentionActi
             SwingUtilities.invokeLater(() -> {
                 TypescriptInterfaceShowerWrapper wrapper = new TypescriptInterfaceShowerWrapper();
                 wrapper.setContent(markedContent);
+
+                // 從內容中提取類名
+                String classNames = extractClassNames(content);
+                if (!classNames.isEmpty()) {
+                    wrapper.setClassName(classNames);
+                }
+
                 wrapper.show();
 
                 // 顯示調試信息
@@ -152,6 +160,26 @@ public class GenerateDtoTsInterfaceIntention extends PsiElementBaseIntentionActi
             // 如果內容為空，顯示錯誤消息
             Messages.showMessageDialog("生成的 TypeScript 接口內容為空", "錯誤", Messages.getErrorIcon());
         }
+    }
+
+    /**
+     * 從 TypeScript 內容中提取類名
+     */
+    private String extractClassNames(String content) {
+        StringBuilder classNames = new StringBuilder();
+
+        // 嘗試匹配所有 interface 定義
+        java.util.regex.Pattern pattern = java.util.regex.Pattern.compile("interface\\s+([A-Za-z0-9_]+)");
+        java.util.regex.Matcher matcher = pattern.matcher(content);
+
+        while (matcher.find()) {
+            if (classNames.length() > 0) {
+                classNames.append(", ");
+            }
+            classNames.append(matcher.group(1));
+        }
+
+        return classNames.toString();
     }
 
     /**
