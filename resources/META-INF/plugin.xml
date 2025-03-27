@@ -1,0 +1,155 @@
+<!-- Plugin Configuration File. Read more: https://plugins.jetbrains.com/docs/intellij/plugin-configuration-file.html -->
+<idea-plugin>
+  <id>org.freeone.javabean.tsinterface</id>
+  <name>Java Bean 2 TS Interface</name>
+  <version>0.2.7</version>
+  <vendor email="free077@qq.com" url="https://github.com/TheFreeOne/Java-Bean-To-Ts-Interface">TheFreeOne</vendor>
+
+  <description>
+    Adds support for converting a java bean file to typescript interface file &lt;br/&gt;
+    Usage instructions : After this plugin is installed, right click on a java bean file or a java entity file, click a menu item called '(→ . →) java bean to typescript interface',
+    choose a folder to save the ts interface file, then open the folder and check the result file   &lt;br/&gt;
+
+	 &lt;pre&gt;&lt;span class="pl-k"&gt;public&lt;/span&gt; &lt;span class="pl-k"&gt;class&lt;/span&gt; &lt;span class="pl-smi"&gt;TestRequest&lt;/span&gt; {
+      &lt;span class="pl-c"&gt;/**&lt;/span&gt;
+      &lt;span class="pl-c"&gt;     * name list&lt;/span&gt;
+      &lt;span class="pl-c"&gt;     */&lt;/span&gt;
+      &lt;span class="pl-c1"&gt;@&lt;/span&gt;&lt;span class="pl-c1"&gt;NotNull&lt;/span&gt;
+      &lt;span class="pl-k"&gt;private&lt;/span&gt; &lt;span class="pl-smi"&gt;String&lt;/span&gt; &lt;span class="pl-s1"&gt;nameArray&lt;/span&gt;[];
+      &lt;span class="pl-k"&gt;private&lt;/span&gt; &lt;span class="pl-smi"&gt;List&lt;/span&gt; 《&lt;span class="pl-smi"&gt;String&lt;/span&gt;》 &lt;span class="pl-s1"&gt;names&lt;/span&gt;;
+
+      &lt;span class="pl-k"&gt;private&lt;/span&gt; &lt;span class="pl-smi"&gt;Boolean&lt;/span&gt; &lt;span class="pl-s1"&gt;isRunning&lt;/span&gt;;
+
+      &lt;span class="pl-k"&gt;private&lt;/span&gt; &lt;span class="pl-smi"&gt;boolean&lt;/span&gt; &lt;span class="pl-s1"&gt;isSuccess&lt;/span&gt;;
+
+      }&lt;/pre&gt;
+    &lt;p dir="auto"&gt;Result =&gt; TestRequest.d.ts&lt;/p&gt;
+    &lt;pre&gt;&lt;span class="pl-k"&gt;export&lt;/span&gt; &lt;span class="pl-k"&gt;default&lt;/span&gt; &lt;span class="pl-k"&gt;interface&lt;/span&gt; &lt;span class="pl-smi"&gt;TestRequest&lt;/span&gt;&lt;span class="pl-kos"&gt;{&lt;/span&gt;
+      &lt;span class="pl-c"&gt;/**&lt;/span&gt;
+      &lt;span class="pl-c"&gt;  * name list&lt;/span&gt;
+      &lt;span class="pl-c"&gt;  */&lt;/span&gt;
+      &lt;span class="pl-c1"&gt;nameArray&lt;/span&gt;: &lt;span class="pl-smi"&gt;string&lt;/span&gt;&lt;span class="pl-kos"&gt;[&lt;/span&gt;&lt;span class="pl-kos"&gt;]&lt;/span&gt;
+
+      &lt;span class="pl-c1"&gt;names&lt;/span&gt;?: &lt;span class="pl-smi"&gt;string&lt;/span&gt;&lt;span class="pl-kos"&gt;[&lt;/span&gt;&lt;span class="pl-kos"&gt;]&lt;/span&gt;
+
+      &lt;span class="pl-c1"&gt;isRunning&lt;/span&gt;?: &lt;span class="pl-smi"&gt;boolean&lt;/span&gt;
+
+      &lt;span class="pl-c1"&gt;isSuccess&lt;/span&gt;?: &lt;span class="pl-smi"&gt;boolean&lt;/span&gt;
+      &lt;span class="pl-kos"&gt;}&lt;/span&gt;&lt;/pre&gt;
+
+    &lt;a href="https://github.com/TheFreeOne/Java-Bean-To-Ts-Interface/blob/main/README.md" target="_blank"&gt;more information&lt;/a&gt;
+  </description>
+
+  <change-notes>
+    0.2.7 若字段是接口则unknown;type of filed is interface , as unknown &lt;br/&gt;
+    0.2.6 支持在editor的空白处右键或者在其中的某个类上右键 , support editor or a class in editor popup menu  &lt;br/&gt;
+    0.2.5 "byte", "short", "int", "long", "double", "float"  &lt;br/&gt;
+    0.2.4 支持 类型直接是 java.lang.Number  &lt;br/&gt;
+    0.2.3 &lt;T&gt;  &lt;br/&gt;
+    0.2.2 fix classNameWithoutPackage maybe null  &lt;br/&gt;
+    0.2.1 基础泛型处理/Basic generic processing  &lt;br/&gt;
+    0.2.0 重写逻辑/Rewriting  &lt;br/&gt;
+    0.0.18 自定义泛型 &lt;br/&gt;
+    0.0.17 fix: "[]" in doc comment be recognized as an array ;修复在注释中写[]会被错误识别成数组的问题 &lt;br/&gt;
+    0.0.16 @JsonProperty in getter setter + find class in all scope + ignore parent fields 支持@JsonProperty在setter getter上, 支持在all scope中查找类, 支持忽略父类的字段 &lt;br/&gt;
+    0.0.15 fix a problem when using inner public static class  修复使用内部公共静态类时的一个问题 &lt;br/&gt;
+    0.0.14 fix the file name when use inner public static class  修复使用内部公共静态类时的文件名 &lt;br/&gt;
+    0.0.13 support inner public static class 支持内部公共静态类 &lt;br/&gt;
+    0.0.12 update description &lt;br/&gt;
+    0.0.11 enable @JsonProperty, needs to be enabled in setting;  &lt;br/&gt;
+    0.0.10 enable Data to String, needs to be enabled in setting &lt;br/&gt;
+    0.0.9  Supports copying to clipboard or editing in textarea &lt;br/&gt;
+    0.0.8  support string[][] , map&lt;string, string&gt; &lt;br/&gt;
+    0.0.7 multi internal class support and fix same interface appears multiple times in 0.0.6 &lt;br/&gt;
+    0.0.6 internal class support &lt;br/&gt;
+    0.0.5 fix: remove cache &lt;br/&gt;
+    0.0.4 show notification after file has bean created &lt;br/&gt;
+    0.0.3 fix: ignore ANNOTATION and INTERFACE &lt;br/&gt;
+    0.0.2 only find java file in project scope &lt;br/&gt;
+    0.0.1 first add Convert java bean to typescript interface &lt;br/&gt;
+  </change-notes>
+
+  <!-- please see https://www.jetbrains.org/intellij/sdk/docs/basics/getting_started/build_number_ranges.html for description -->
+  <idea-version since-build="202.0"/>
+
+  <!-- please see https://www.jetbrains.org/intellij/sdk/docs/basics/getting_started/plugin_compatibility.html
+       on how to target different products -->
+  <depends>com.intellij.modules.java</depends>
+  <depends>com.intellij.modules.platform</depends>
+
+  <extensions defaultExtensionNs="com.intellij">
+<!--    <notificationGroup id="Custom Notification Group"-->
+<!--                       displayType="BALLOON"-->
+<!--                       key="notification.group.name"/>-->
+    <applicationService
+            serviceImplementation="org.freeone.javabean.tsinterface.setting.JavaBeanToTypescriptInterfaceSettingsState"/>
+
+    <!--            parentId="tools"-->
+    <applicationConfigurable
+            instance="org.freeone.javabean.tsinterface.setting.JavaBeanToTypescriptInterfaceSettingsConfigurable"
+            id="org.freeone.javabean.tsinterface.setting.JavaBeanToTypescriptInterfaceSettingsConfigurable"
+            displayName="Java Bean To Ts Interface Settings"/>
+  </extensions>
+
+
+  <actions>
+
+
+
+
+
+    <group id="javaBeanToTypescriptInterfaceRightClickMenu" text="(→ . →) Java Bean to Typescript Interface" description="Java bean to typescript interface actions group" popup="true" >
+      <add-to-group group-id="ProjectViewPopupMenuModifyGroup" anchor="last"   />
+      <add-to-group group-id="EditorPopupMenu" anchor="last"/>
+    </group>
+
+    <group id="javaBeanToTypescriptInterfaceRightClickMenu1" text="1.0/Old Logic" description="旧逻辑" popup="true" >
+      <add-to-group group-id="javaBeanToTypescriptInterfaceRightClickMenu" anchor="last"   />
+    </group>
+
+    <action id="JavaBeanToTypescriptInterface"
+            class="org.freeone.javabean.tsinterface.JavaBeanToTypescriptInterfaceAction"
+            text="Save To File"
+            description="Right click on a java bean file and convert it to a typescript interface and  save to file">
+      <add-to-group group-id="javaBeanToTypescriptInterfaceRightClickMenu1" anchor="first"  />
+    </action>
+
+    <!-- 复制到剪切板 -->
+    <action id="JavaBeanToTypescriptInterfaceCopyToClipboard"
+            class="org.freeone.javabean.tsinterface.JavaBeanToTypescriptInterfaceAction"
+            text="Copy To Clipboard"
+            description="Right click on a java bean file and convert it to a typescript interface and copy to clipboard">
+      <add-to-group group-id="javaBeanToTypescriptInterfaceRightClickMenu1" anchor="first" />
+    </action>
+
+    <action id="JavaBeanToTypescriptInterfaceEditAtTextareaToWrapper"
+            class="org.freeone.javabean.tsinterface.JavaBeanToTypescriptInterfaceAction"
+            text="Edit At Textarea"
+            description="Right click on a java bean file and convert it to a typescript interface and show">
+      <add-to-group group-id="javaBeanToTypescriptInterfaceRightClickMenu1" anchor="last"  />
+    </action>
+
+    <action id="JavaBeanToTypescriptInterface2"
+            class="org.freeone.javabean.tsinterface.JavaBeanToTypescriptInterfaceAction"
+            text="Save To File"
+            description="Right click on a java bean file and convert it to a typescript interface and  save to file 2.0 ">
+      <add-to-group group-id="javaBeanToTypescriptInterfaceRightClickMenu" anchor="first"  />
+    </action>
+
+    <!-- 复制到剪切板 -->
+    <action id="JavaBeanToTypescriptInterfaceCopyToClipboard2"
+            class="org.freeone.javabean.tsinterface.JavaBeanToTypescriptInterfaceAction"
+            text="Copy To Clipboard"
+            description="Right click on a java bean file and convert it to a typescript interface and copy to clipboard  2.0 ">
+      <add-to-group group-id="javaBeanToTypescriptInterfaceRightClickMenu" relative-to-action="JavaBeanToTypescriptInterface2"  anchor="after"  />
+    </action>
+
+    <action id="JavaBeanToTypescriptInterfaceEditAtTextareaToWrapper2"
+            class="org.freeone.javabean.tsinterface.JavaBeanToTypescriptInterfaceAction"
+            text="Edit In Textarea"
+            description="Right click on a java bean file and convert it to a typescript interface and displayed in textarea 2.0 ">
+      <add-to-group group-id="javaBeanToTypescriptInterfaceRightClickMenu" relative-to-action="JavaBeanToTypescriptInterfaceCopyToClipboard2" anchor="after" />
+    </action>
+  </actions>
+
+</idea-plugin>
