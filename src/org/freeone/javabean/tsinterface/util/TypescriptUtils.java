@@ -311,14 +311,31 @@ public class TypescriptUtils {
         PsiDocComment docComment = fieldItem.getDocComment();
         if (docComment != null) {
             String docCommentText = docComment.getText();
-            if (docCommentText != null) {
-                String[] split = docCommentText.split("\\n");
-                for (String docCommentLine : split) {
-                    docCommentLine = docCommentLine.trim();
-                    interfaceContent.append("  ").append(docCommentLine).append("\n");
+            if (docCommentText != null && !docCommentText.trim().isEmpty()) {
+                // 提取註解內容
+                String commentContent = extractCommentContent(docCommentText);
+                if (!commentContent.isEmpty()) {
+                    interfaceContent.append("  /**\n   * ").append(commentContent).append("\n   */\n");
                 }
             }
         }
+    }
+
+    private static String extractCommentContent(String comment) {
+        // 移除 Java 文檔註解標記
+        String content = comment.trim()
+                .replaceAll("/\\*\\*", "") // 移除開頭的 /**
+                .replaceAll("\\*/", "") // 移除結尾的 */
+                .replaceAll("^\\s*\\*\\s*", "") // 移除每行開頭的 * 及其前後空格
+                .replaceAll("\\n\\s*\\*\\s*", " ") // 將多行註解合併為單行，移除行開頭的 * 及空格
+                .trim();
+
+        // 如果有 @param、@return 等標記，只保留主要描述
+        if (content.contains("@")) {
+            content = content.split("@")[0].trim();
+        }
+
+        return content;
     }
 
     private static void processMap(Project project, int treeLevel, StringBuilder interfaceContent, PsiField fieldItem,

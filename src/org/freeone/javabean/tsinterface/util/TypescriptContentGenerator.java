@@ -238,10 +238,18 @@ public class TypescriptContentGenerator {
                     String typeString;
                     PsiType fieldType = fieldItem.getType();
                     typeString = getTypeString(project, fieldType);
+
+                    // 統一格式化文檔註解
                     if (documentText.trim().length() > 0) {
-                        contentBuilder.append("  ").append(documentText).append("\n");
+                        // 提取註解中的有效內容
+                        String commentContent = extractCommentContent(documentText);
+                        if (!commentContent.isEmpty()) {
+                            contentBuilder.append("  /**\n   * ").append(commentContent).append("\n   */\n");
+                        }
                     }
-                    contentBuilder.append("  ").append(fieldName).append(fieldSplitTag).append(typeString).append("\n");
+
+                    contentBuilder.append("  ").append(fieldName).append(fieldSplitTag).append(typeString)
+                            .append(";\n");
                     if (i != fields.length - 1) {
                         contentBuilder.append("\n");
                     }
@@ -260,7 +268,7 @@ public class TypescriptContentGenerator {
                     }
                 }
                 String join = String.join(" | ", enumConstantValueList);
-                contentBuilder.append(join).append("\n");
+                contentBuilder.append(join).append(";\n");
 
             } else {
                 return "unknown";
@@ -269,7 +277,12 @@ public class TypescriptContentGenerator {
             SUCCESS_CANONICAL_TEXT.add(classNameWithPackage);
             PsiDocComment classDocComment = psiClass.getDocComment();
             if (classDocComment != null && classDocComment.getText() != null) {
-                CLASS_NAME_WITH_PACKAGE_2_TYPESCRIPT_COMMENT.put(classNameWithPackage, classDocComment.getText());
+                // 統一格式化類註解
+                String classComment = extractCommentContent(classDocComment.getText());
+                if (!classComment.isEmpty()) {
+                    String formattedComment = "/**\n * " + classComment + "\n */\n";
+                    CLASS_NAME_WITH_PACKAGE_2_TYPESCRIPT_COMMENT.put(classNameWithPackage, formattedComment);
+                }
             }
             CLASS_NAME_WITH_PACKAGE_2_CONTENT.put(classNameWithPackage, content);
 
@@ -444,5 +457,22 @@ public class TypescriptContentGenerator {
             }
 
         }
+    }
+
+    private static String extractCommentContent(String comment) {
+        // 移除 Java 文檔註解標記
+        String content = comment.trim()
+                .replaceAll("/\\*\\*", "") // 移除開頭的 /**
+                .replaceAll("\\*/", "") // 移除結尾的 */
+                .replaceAll("^\\s*\\*\\s*", "") // 移除每行開頭的 * 及其前後空格
+                .replaceAll("\\n\\s*\\*\\s*", " ") // 將多行註解合併為單行，移除行開頭的 * 及空格
+                .trim();
+
+        // 如果有 @param、@return 等標記，只保留主要描述
+        if (content.contains("@")) {
+            content = content.split("@")[0].trim();
+        }
+
+        return content;
     }
 }
