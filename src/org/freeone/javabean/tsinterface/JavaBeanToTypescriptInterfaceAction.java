@@ -5,6 +5,7 @@ import com.intellij.notification.Notification;
 import com.intellij.notification.NotificationDisplayType;
 import com.intellij.notification.NotificationGroup;
 import com.intellij.notification.NotificationType;
+import com.intellij.notification.NotificationGroupManager;
 import com.intellij.openapi.actionSystem.AnAction;
 import com.intellij.openapi.actionSystem.AnActionEvent;
 import com.intellij.openapi.actionSystem.PlatformDataKeys;
@@ -38,8 +39,8 @@ import java.util.Optional;
  */
 public class JavaBeanToTypescriptInterfaceAction extends AnAction {
 
-    private final NotificationGroup notificationGroup = new NotificationGroup("JavaDtoToTypescriptInterface",
-            NotificationDisplayType.STICKY_BALLOON, true);
+    private final NotificationGroup notificationGroup = NotificationGroupManager.getInstance()
+            .getNotificationGroup("JavaDtoToTypescriptInterface");
 
     @Override
     public void actionPerformed(AnActionEvent e) {
@@ -172,7 +173,7 @@ public class JavaBeanToTypescriptInterfaceAction extends AnAction {
      * @param interfaceContent
      */
     private void generateTypescriptContent(AnActionEvent e, Project project, boolean saveToFile, String fileNameToSave,
-                                           String interfaceContent) {
+            String interfaceContent) {
         if (saveToFile) {
             FileChooserDescriptor chooserDescriptor = CommonUtils.createFileChooserDescriptor("Choose a folder",
                     "The declaration file end with '.d.ts' will be saved in this folder");

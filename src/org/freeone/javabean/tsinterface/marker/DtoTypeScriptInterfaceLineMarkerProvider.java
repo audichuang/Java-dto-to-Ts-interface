@@ -1,13 +1,14 @@
 package org.freeone.javabean.tsinterface.marker;
 
-import com.intellij.codeInsight.daemon.RelatedItemLineMarkerInfo;
-import com.intellij.codeInsight.daemon.RelatedItemLineMarkerProvider;
-import com.intellij.codeInsight.navigation.NavigationGutterIconBuilder;
+import com.intellij.codeInsight.daemon.GutterIconDescriptor;
+import com.intellij.codeInsight.daemon.LineMarkerInfo;
+import com.intellij.codeInsight.daemon.LineMarkerProvider;
+import com.intellij.codeInsight.daemon.LineMarkerProviderDescriptor;
 import com.intellij.openapi.editor.markup.GutterIconRenderer;
 import com.intellij.openapi.project.Project;
 import com.intellij.psi.*;
-import com.intellij.psi.util.PsiTreeUtil;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import javax.swing.*;
 import java.util.ArrayList;
@@ -17,49 +18,55 @@ import java.util.List;
 /**
  * 在包含 DTO 類的方法上顯示行標記
  */
-public class DtoTypeScriptInterfaceLineMarkerProvider extends RelatedItemLineMarkerProvider {
+public class DtoTypeScriptInterfaceLineMarkerProvider extends LineMarkerProviderDescriptor {
 
     @Override
-    protected void collectNavigationMarkers(@NotNull PsiElement element,
-            @NotNull Collection<? super RelatedItemLineMarkerInfo<?>> result) {
+    public String getName() {
+        return "DTO TypeScript Interface Generator";
+    }
+
+    @Override
+    public @Nullable Icon getIcon() {
+        // 使用內置圖標，後續可以替換為自定義圖標
+        return com.intellij.icons.AllIcons.Nodes.Interface;
+    }
+
+    @Override
+    public @Nullable LineMarkerInfo<?> getLineMarkerInfo(@NotNull PsiElement element) {
         // 只處理方法聲明
         if (!(element instanceof PsiMethod)) {
-            return;
+            return null;
         }
 
         PsiMethod method = (PsiMethod) element;
-        Project project = element.getProject();
 
         // 檢查是否是控制器方法
         boolean isControllerMethod = isControllerMethod(method);
         if (!isControllerMethod) {
-            return;
+            return null;
         }
 
         // 收集 DTO 類
         List<PsiClass> dtoClasses = collectDtoClasses(method);
         if (dtoClasses.isEmpty()) {
-            return;
+            return null;
         }
 
         // 創建行標記
-        NavigationGutterIconBuilder<PsiElement> builder = NavigationGutterIconBuilder
-                .create(getIcon())
-                .setTargets(dtoClasses)
-                .setTooltipText("生成 DTO 的 TypeScript 接口")
-                .setAlignment(GutterIconRenderer.Alignment.CENTER);
-
-        result.add(builder
-                .createLineMarkerInfo(method.getNameIdentifier() != null ? method.getNameIdentifier() : element));
+        return new LineMarkerInfo<>(
+                method.getNameIdentifier() != null ? method.getNameIdentifier() : element,
+                method.getNameIdentifier() != null ? method.getNameIdentifier().getTextRange() : element.getTextRange(),
+                getIcon(),
+                psiElement -> "生成 DTO 的 TypeScript 接口",
+                null,
+                GutterIconRenderer.Alignment.CENTER,
+                () -> "生成 DTO 的 TypeScript 接口");
     }
 
-    /**
-     * 獲取圖標
-     */
     @Override
-    public Icon getIcon() {
-        // 使用內置圖標，後續可以替換為自定義圖標
-        return com.intellij.icons.AllIcons.Nodes.Interface;
+    public void collectSlowLineMarkers(@NotNull List<? extends PsiElement> elements,
+            @NotNull Collection<? super LineMarkerInfo<?>> result) {
+        // 由於我們已經在 getLineMarkerInfo 中處理了標記，這裡不需要額外實現
     }
 
     /**

@@ -79,9 +79,9 @@
   <depends>com.intellij.modules.platform</depends>
 
   <extensions defaultExtensionNs="com.intellij">
-<!--    <notificationGroup id="Custom Notification Group"-->
-<!--                       displayType="BALLOON"-->
-<!--                       key="notification.group.name"/>-->
+    <!-- 註冊通知組 -->
+    <notificationGroup id="JavaDtoToTypescriptInterface" displayType="BALLOON" toolWindowId="Event Log"/>
+
     <applicationService
             serviceImplementation="org.freeone.javabean.tsinterface.setting.JavaBeanToTypescriptInterfaceSettingsState"/>
 

@@ -1,9 +1,6 @@
 package org.freeone.javabean.tsinterface.service;
 
-import com.intellij.notification.Notification;
-import com.intellij.notification.NotificationDisplayType;
-import com.intellij.notification.NotificationGroup;
-import com.intellij.notification.NotificationType;
+import com.intellij.notification.*;
 import com.intellij.openapi.fileChooser.FileChooser;
 import com.intellij.openapi.fileChooser.FileChooserDescriptor;
 import com.intellij.openapi.project.Project;
@@ -31,8 +28,8 @@ import java.util.Map;
  */
 public class DtoTypescriptGeneratorService {
 
-    private static final NotificationGroup notificationGroup = new NotificationGroup("JavaDtoToTypescriptInterface",
-            NotificationDisplayType.STICKY_BALLOON, true);
+    private static final NotificationGroup notificationGroup = NotificationGroupManager.getInstance()
+            .getNotificationGroup("JavaDtoToTypescriptInterface");
 
     /**
      * 為多個 DTO 類生成 TypeScript 接口
