@@ -1,0 +1,164 @@
+package org.freeone.javabean.tsinterface.marker;
+
+import com.intellij.codeInsight.daemon.RelatedItemLineMarkerInfo;
+import com.intellij.codeInsight.daemon.RelatedItemLineMarkerProvider;
+import com.intellij.codeInsight.navigation.NavigationGutterIconBuilder;
+import com.intellij.openapi.editor.markup.GutterIconRenderer;
+import com.intellij.openapi.project.Project;
+import com.intellij.psi.*;
+import com.intellij.psi.util.PsiTreeUtil;
+import org.jetbrains.annotations.NotNull;
+
+import javax.swing.*;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
+
+/**
+ * 在包含 DTO 類的方法上顯示行標記
+ */
+public class DtoTypeScriptInterfaceLineMarkerProvider extends RelatedItemLineMarkerProvider {
+
+    @Override
+    protected void collectNavigationMarkers(@NotNull PsiElement element,
+            @NotNull Collection<? super RelatedItemLineMarkerInfo<?>> result) {
+        // 只處理方法聲明
+        if (!(element instanceof PsiMethod)) {
+            return;
+        }
+
+        PsiMethod method = (PsiMethod) element;
+        Project project = element.getProject();
+
+        // 檢查是否是控制器方法
+        boolean isControllerMethod = isControllerMethod(method);
+        if (!isControllerMethod) {
+            return;
+        }
+
+        // 收集 DTO 類
+        List<PsiClass> dtoClasses = collectDtoClasses(method);
+        if (dtoClasses.isEmpty()) {
+            return;
+        }
+
+        // 創建行標記
+        NavigationGutterIconBuilder<PsiElement> builder = NavigationGutterIconBuilder
+                .create(getIcon())
+                .setTargets(dtoClasses)
+                .setTooltipText("生成 DTO 的 TypeScript 接口")
+                .setAlignment(GutterIconRenderer.Alignment.CENTER);
+
+        result.add(builder
+                .createLineMarkerInfo(method.getNameIdentifier() != null ? method.getNameIdentifier() : element));
+    }
+
+    /**
+     * 獲取圖標
+     */
+    @Override
+    public Icon getIcon() {
+        // 使用內置圖標，後續可以替換為自定義圖標
+        return com.intellij.icons.AllIcons.Nodes.Interface;
+    }
+
+    /**
+     * 檢查方法是否是控制器方法
+     */
+    private boolean isControllerMethod(PsiMethod method) {
+        PsiAnnotation[] annotations = method.getAnnotations();
+        for (PsiAnnotation annotation : annotations) {
+            String qualifiedName = annotation.getQualifiedName();
+            if (qualifiedName != null && (qualifiedName.endsWith("RequestMapping") ||
+                    qualifiedName.endsWith("GetMapping") ||
+                    qualifiedName.endsWith("PostMapping") ||
+                    qualifiedName.endsWith("PutMapping") ||
+                    qualifiedName.endsWith("DeleteMapping"))) {
+                return true;
+            }
+        }
+
+        // 檢查類上的註解
+        PsiClass containingClass = method.getContainingClass();
+        if (containingClass != null) {
+            PsiAnnotation[] classAnnotations = containingClass.getAnnotations();
+            for (PsiAnnotation annotation : classAnnotations) {
+                String qualifiedName = annotation.getQualifiedName();
+                if (qualifiedName != null && (qualifiedName.endsWith("Controller") ||
+                        qualifiedName.endsWith("RestController"))) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * 收集方法中的 DTO 類
+     */
+    private List<PsiClass> collectDtoClasses(PsiMethod method) {
+        List<PsiClass> dtoClasses = new ArrayList<>();
+
+        // 檢查返回類型
+        PsiType returnType = method.getReturnType();
+        if (returnType != null) {
+            addDtoClassesFromType(returnType, dtoClasses);
+        }
+
+        // 檢查參數類型
+        PsiParameter[] parameters = method.getParameterList().getParameters();
+        for (PsiParameter parameter : parameters) {
+            PsiType parameterType = parameter.getType();
+            addDtoClassesFromType(parameterType, dtoClasses);
+        }
+
+        return dtoClasses;
+    }
+
+    /**
+     * 從類型中提取 DTO 類
+     */
+    private void addDtoClassesFromType(PsiType type, List<PsiClass> dtoClasses) {
+        // 處理泛型類型
+        if (type instanceof PsiClassType) {
+            PsiClassType classType = (PsiClassType) type;
+            PsiClass psiClass = classType.resolve();
+
+            if (psiClass != null && isDtoClass(psiClass)) {
+                dtoClasses.add(psiClass);
+            }
+
+            // 處理泛型參數
+            PsiType[] parameters = classType.getParameters();
+            for (PsiType parameter : parameters) {
+                addDtoClassesFromType(parameter, dtoClasses);
+            }
+        }
+    }
+
+    /**
+     * 判斷一個類是否為 DTO 類
+     */
+    private boolean isDtoClass(PsiClass psiClass) {
+        // 通常 DTO 類是普通 Java 類，不是接口、枚舉或者註解
+        if (psiClass.isInterface() || psiClass.isEnum() || psiClass.isAnnotationType()) {
+            return false;
+        }
+
+        // 通常 DTO 類名稱包含一些特定的模式
+        String className = psiClass.getName();
+        if (className == null) {
+            return false;
+        }
+
+        return className.endsWith("DTO")
+                || className.endsWith("Dto")
+                || className.endsWith("Request")
+                || className.endsWith("Response")
+                || className.endsWith("Rq")
+                || className.endsWith("Rs")
+                || className.endsWith("Tranrq")
+                || className.endsWith("Tranrs");
+    }
+}

@@ -90,6 +90,16 @@
             instance="org.freeone.javabean.tsinterface.setting.JavaBeanToTypescriptInterfaceSettingsConfigurable"
             id="org.freeone.javabean.tsinterface.setting.JavaBeanToTypescriptInterfaceSettingsConfigurable"
             displayName="Java DTO To TypeScript Interface Settings"/>
+
+    <!-- 註冊意圖操作，用於在 Controller 方法中偵測 DTO 類並提供生成 TypeScript 接口的選項 -->
+    <intentionAction>
+      <className>org.freeone.javabean.tsinterface.intention.GenerateDtoTsInterfaceIntention</className>
+      <category>Java/DTO</category>
+    </intentionAction>
+    
+    <!-- 註冊行標記提供程序，為包含 DTO 類的控制器方法添加圖標 -->
+    <codeInsight.lineMarkerProvider language="JAVA" 
+                                    implementationClass="org.freeone.javabean.tsinterface.marker.DtoTypeScriptInterfaceLineMarkerProvider"/>
   </extensions>
 
 
