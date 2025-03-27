@@ -42,45 +42,118 @@ public class TypescriptContentGenerator {
      */
     private static final Map<String, String> CLASS_NAME_WITH_PACKAGE_2_CONTENT = new HashMap<>(8);
 
-
     public static void processPsiClass(Project project, PsiClass selectedClass, boolean needDefault) {
 
-//        PsiClass[] innerClasses = selectedClass.getInnerClasses();
+        // PsiClass[] innerClasses = selectedClass.getInnerClasses();
         createTypescriptContentForSinglePsiClass(project, selectedClass);
-//        for (PsiClass innerClass : innerClasses) {
-//            createTypescriptContentForSinglePsiClass(innerClass);
-//        }
+        // for (PsiClass innerClass : innerClasses) {
+        // createTypescriptContentForSinglePsiClass(innerClass);
+        // }
     }
 
     /**
      * 合并成一个文件
      */
     public static String mergeContent(PsiClass selectedClass, boolean needDefault) {
-
         List<String> contentList = new ArrayList<>();
         String qualifiedName = selectedClass.getQualifiedName();
+
+        // 創建用於排序的列表，使用Map保存類名和內容
+        Map<String, String> requestClasses = new HashMap<>();
+        Map<String, String> requestDependencyClasses = new HashMap<>();
+        Map<String, String> responseClasses = new HashMap<>();
+        Map<String, String> otherClasses = new HashMap<>();
+
+        // 過濾並分類
         for (String classNameWithPackage : SUCCESS_CANONICAL_TEXT) {
-            StringBuilder stringBuilder = new StringBuilder();
             String content = CLASS_NAME_WITH_PACKAGE_2_CONTENT.get(classNameWithPackage);
-            if (content != null && content.length() > 0) {
-                // 以后做成一个配置项
-//                 stringBuilder.append(" /**\n" + "  * @packageName ").append(classNameWithPackage).append(" \n").append("  */\n");
-                String psiClassCComment = CLASS_NAME_WITH_PACKAGE_2_TYPESCRIPT_COMMENT.get(classNameWithPackage);
-                if (psiClassCComment != null && psiClassCComment.trim().length() > 0) {
-                    if (psiClassCComment.endsWith("\n")) {
-                        stringBuilder.append(psiClassCComment);
-                    } else {
-                        stringBuilder.append(psiClassCComment).append("\n");
+            if (content == null || content.length() == 0) {
+                continue;
+            }
+
+            // 獲取簡單類名
+            String simpleClassName = classNameWithPackage.substring(classNameWithPackage.lastIndexOf('.') + 1);
+
+            // 過濾標準庫類型
+            if (classNameWithPackage.startsWith("java.time.") ||
+                    simpleClassName.equals("LocalDate") ||
+                    simpleClassName.equals("LocalTime") ||
+                    simpleClassName.equals("LocalDateTime")) {
+                continue;
+            }
+
+            StringBuilder stringBuilder = new StringBuilder();
+            // 添加註釋
+            String psiClassCComment = CLASS_NAME_WITH_PACKAGE_2_TYPESCRIPT_COMMENT.get(classNameWithPackage);
+            if (psiClassCComment != null && psiClassCComment.trim().length() > 0) {
+                if (psiClassCComment.endsWith("\n")) {
+                    stringBuilder.append(psiClassCComment);
+                } else {
+                    stringBuilder.append(psiClassCComment).append("\n");
+                }
+            }
+
+            stringBuilder.append("export ");
+            if (needDefault && classNameWithPackage.equalsIgnoreCase(qualifiedName)) {
+                stringBuilder.append("default ");
+            }
+            stringBuilder.append(content);
+            String formattedContent = stringBuilder.toString();
+
+            // 根據類名對內容進行分類
+            if (simpleClassName.endsWith("Tranrq") || simpleClassName.endsWith("Req")
+                    || simpleClassName.endsWith("Request")) {
+                requestClasses.put(simpleClassName, formattedContent);
+            } else if (simpleClassName.endsWith("Tranrs") || simpleClassName.endsWith("Rs")
+                    || simpleClassName.endsWith("Response")) {
+                responseClasses.put(simpleClassName, formattedContent);
+            } else {
+                // 檢查是否為請求類的依賴類
+                boolean isDependency = false;
+                for (String reqClassName : requestClasses.keySet()) {
+                    // 檢查請求類內容中是否使用了這個類
+                    String reqClassContent = requestClasses.get(reqClassName);
+                    // 檢查請求類中是否包含該類的引用, 如通過名稱檢查可能的使用
+                    if (reqClassName.contains(simpleClassName) ||
+                            content.contains(simpleClassName) ||
+                            reqClassContent.contains(simpleClassName)) {
+                        requestDependencyClasses.put(simpleClassName, formattedContent);
+                        isDependency = true;
+                        break;
                     }
                 }
-                stringBuilder.append("export ");
-                if (needDefault && classNameWithPackage.equalsIgnoreCase(qualifiedName)) {
-                    stringBuilder.append("default ");
+
+                if (!isDependency) {
+                    // 檢查是否為響應類的依賴類
+                    for (String resClassName : responseClasses.keySet()) {
+                        String resClassContent = responseClasses.get(resClassName);
+                        if (resClassName.contains(simpleClassName) ||
+                                content.contains(simpleClassName) ||
+                                resClassContent.contains(simpleClassName)) {
+                            // 如果是響應類依賴，也放到響應類中
+                            responseClasses.put(simpleClassName, formattedContent);
+                            isDependency = true;
+                            break;
+                        }
+                    }
+
+                    // 如果不是任何類的依賴，則放到其他類中
+                    if (!isDependency) {
+                        otherClasses.put(simpleClassName, formattedContent);
+                    }
                 }
-                stringBuilder.append(content);
-                contentList.add(stringBuilder.toString());
             }
         }
+
+        // 添加排序後的類到結果列表
+        // 1. 請求類
+        contentList.addAll(requestClasses.values());
+        // 2. 請求類依賴的類
+        contentList.addAll(requestDependencyClasses.values());
+        // 3. 響應類
+        contentList.addAll(responseClasses.values());
+        // 4. 其他類
+        contentList.addAll(otherClasses.values());
 
         return String.join("\n", contentList);
     }
@@ -90,7 +163,6 @@ public class TypescriptContentGenerator {
         CLASS_NAME_WITH_PACKAGE_2_CONTENT.clear();
         CREATE_TYPESCRIPT_CONTENT_FOR_SINGLE_PSI_CLASS_ENTRY.clear();
     }
-
 
     /**
      * 为单独的class创建内容
@@ -124,7 +196,7 @@ public class TypescriptContentGenerator {
                 // 泛型
                 classNameWithoutPackage = CommonUtils.getClassNameWithGenerics(psiClass);
             } catch (Exception e) {
-//                e.printStackTrace();
+                // e.printStackTrace();
             }
 
             PsiField[] fields = psiClass.getAllFields();
@@ -143,7 +215,7 @@ public class TypescriptContentGenerator {
                         documentText = docComment.getText();
                     }
                     String fieldName = fieldItem.getName();
-                    //  2023-12-26 判断是或否使用JsonProperty
+                    // 2023-12-26 判断是或否使用JsonProperty
                     if (JavaBeanToTypescriptInterfaceSettingsState.getInstance().useAnnotationJsonProperty) {
                         String jsonPropertyValue = CommonUtils.getJsonPropertyValue(fieldItem, allMethods);
                         if (jsonPropertyValue != null) {
@@ -172,7 +244,7 @@ public class TypescriptContentGenerator {
             } else if (classKind.equals(JvmClassKind.ENUM)) {
                 contentBuilder.append("type ").append(classNameWithoutPackage).append(" = ");
                 List<String> enumConstantValueList = new ArrayList<>();
-//                enumConstantValueList.add("string");
+                // enumConstantValueList.add("string");
                 for (PsiField psiField : fields) {
                     if (psiField instanceof PsiEnumConstant) {
                         String name = psiField.getName();
@@ -201,7 +273,6 @@ public class TypescriptContentGenerator {
         }
     }
 
-
     /**
      * 从fieldType中获取类型
      *
@@ -220,13 +291,24 @@ public class TypescriptContentGenerator {
             typeString = "string";
         } else if (CommonUtils.isBooleanType(fieldType)) {
             typeString = "boolean";
-        } else if (CommonUtils.isJavaUtilDateType(fieldType) && JavaBeanToTypescriptInterfaceSettingsState.getInstance().enableDataToString) {
+        } else if (CommonUtils.isJavaUtilDateType(fieldType)
+                && JavaBeanToTypescriptInterfaceSettingsState.getInstance().enableDataToString) {
             typeString = "string";
         } else if (CommonUtils.isMapType(fieldType)) {
             typeString = processMap(project, fieldType);
         } else if (CommonUtils.isArrayType(fieldType)) {
             typeString = processList(project, fieldType);
         } else {
+            // 檢查類型是否來自標準庫
+            String canonicalText = fieldType.getCanonicalText();
+            if (canonicalText.startsWith("java.time.") ||
+                    canonicalText.endsWith(".LocalDate") ||
+                    canonicalText.endsWith(".LocalTime") ||
+                    canonicalText.endsWith(".LocalDateTime")) {
+                // 對於標準庫日期時間類型，使用 any 替代
+                return "any";
+            }
+
             if (fieldType instanceof PsiClassReferenceType) {
                 PsiClassReferenceType psiClassReferenceType = (PsiClassReferenceType) fieldType;
                 PsiType[] parameters = psiClassReferenceType.getParameters();
@@ -238,10 +320,10 @@ public class TypescriptContentGenerator {
                     }
                     PsiClass resolvePsiClass = psiClassReferenceType.resolve();
                     createTypescriptContentForSinglePsiClass(project, resolvePsiClass);
-                    // 类似 PageModel<Student>
+                    // 類似 PageModel<Student>
                     typeString = psiClassReferenceType.getPresentableText();
                 } else {
-                    //普通类
+                    // 普通類
                     PsiClass resolve = psiClassReferenceType.resolve();
                     typeString = createTypescriptContentForSinglePsiClass(project, resolve);
                 }
@@ -254,7 +336,6 @@ public class TypescriptContentGenerator {
         }
         return typeString;
     }
-
 
     private static String processList(Project project, PsiType psiType) {
         return getFirstTsTypeForArray(project, 0, psiType);
@@ -284,13 +365,13 @@ public class TypescriptContentGenerator {
 
                     defaultVType = getTypeString(project, vType);
                     System.out.println("vtype = " + defaultVType);
-//                    if (vType instanceof PsiArrayType) {
-//                        PsiType getDeepComponentType = vType.getDeepComponentType();
-//                        defaultVType = processList(project, getDeepComponentType);
-//                    } else if (vType instanceof PsiClassReferenceType) {
-//                        PsiType getDeepComponentType = type.getDeepComponentType();
-//                        defaultVType = getTypeString(project, getDeepComponentType);
-//                    }
+                    // if (vType instanceof PsiArrayType) {
+                    // PsiType getDeepComponentType = vType.getDeepComponentType();
+                    // defaultVType = processList(project, getDeepComponentType);
+                    // } else if (vType instanceof PsiClassReferenceType) {
+                    // PsiType getDeepComponentType = type.getDeepComponentType();
+                    // defaultVType = getTypeString(project, getDeepComponentType);
+                    // }
 
                 } else {
                     PsiClass psiClass = CommonUtils.findPsiClass(project, vType);
@@ -298,7 +379,7 @@ public class TypescriptContentGenerator {
                         defaultVType = "any";
                     } else {
                         defaultVType = createTypescriptContentForSinglePsiClass(project, psiClass);
-//                        defaultVType = vType.getPresentableText();
+                        // defaultVType = vType.getPresentableText();
                     }
                 }
 
@@ -309,12 +390,13 @@ public class TypescriptContentGenerator {
         return "{[x:string]: " + defaultVType + "}";
     }
 
-
     private static String getFirstTsTypeForArray(Project project, int treeLevel, PsiType psiType) {
         if (treeLevel > 100) {
             return "any";
         }
-        List<PsiType> numberSuperClass = Arrays.stream(psiType.getSuperTypes()).filter(superTypeItem -> superTypeItem.getCanonicalText().equals("java.lang.Number")).collect(Collectors.toList());
+        List<PsiType> numberSuperClass = Arrays.stream(psiType.getSuperTypes())
+                .filter(superTypeItem -> superTypeItem.getCanonicalText().equals("java.lang.Number"))
+                .collect(Collectors.toList());
         if (!numberSuperClass.isEmpty()) {
             return "number";
         }

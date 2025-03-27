@@ -44,21 +44,12 @@ public class TypescriptInterfaceShowerWrapper extends DialogWrapper {
 
         JButton copyFileNameButton = new JButton("複製檔名");
         copyFileNameButton.addActionListener(e -> {
-            if (fileNameField.getText() != null && !fileNameField.getText().isEmpty()) {
+            String text = fileNameField.getText();
+            if (text != null && !text.isEmpty()) {
                 Clipboard clipboard = Toolkit.getDefaultToolkit().getSystemClipboard();
-                StringSelection selection = new StringSelection(fileNameField.getText());
+                StringSelection selection = new StringSelection(text);
                 clipboard.setContents(selection, null);
-
-                // 移除彈窗通知，改用更不擾人的方式
-                System.out.println("已複製檔名: " + fileNameField.getText());
-
-                // 可以選擇改變按鈕文字短暫時間來提示用戶
-                copyFileNameButton.setText("已複製");
-                Timer timer = new Timer(1500, evt -> {
-                    copyFileNameButton.setText("複製檔名");
-                });
-                timer.setRepeats(false);
-                timer.start();
+                JOptionPane.showMessageDialog(null, "已複製檔名到剪貼板", "提示", JOptionPane.INFORMATION_MESSAGE);
             }
         });
 
@@ -192,6 +183,20 @@ public class TypescriptInterfaceShowerWrapper extends DialogWrapper {
                     // 獲取文本
                     String text = typescriptInterfaceContentDisplayPanel.getTextArea().getText();
                     if (text != null && !text.isEmpty()) {
+                        // 檢查內容是否包含 any 類型
+                        if (text.contains(": any") || text.contains("?: any")) {
+                            int result = JOptionPane.showConfirmDialog(
+                                    null,
+                                    "內容中存在未知類型(any)，建議手動檢查並修改。是否仍要複製？",
+                                    "類型警告",
+                                    JOptionPane.YES_NO_OPTION,
+                                    JOptionPane.WARNING_MESSAGE);
+
+                            if (result != JOptionPane.YES_OPTION) {
+                                return;
+                            }
+                        }
+
                         // 複製到剪貼板
                         Clipboard systemClipboard = Toolkit.getDefaultToolkit().getSystemClipboard();
                         Transferable tText = new StringSelection(text);
