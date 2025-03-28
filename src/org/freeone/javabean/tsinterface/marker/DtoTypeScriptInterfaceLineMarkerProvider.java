@@ -7,6 +7,7 @@ import com.intellij.codeInsight.daemon.LineMarkerProviderDescriptor;
 import com.intellij.openapi.editor.markup.GutterIconRenderer;
 import com.intellij.openapi.project.Project;
 import com.intellij.psi.*;
+import org.freeone.javabean.tsinterface.setting.JavaBeanToTypescriptInterfaceSettingsState;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -159,29 +160,12 @@ public class DtoTypeScriptInterfaceLineMarkerProvider extends LineMarkerProvider
             return false;
         }
 
-        // 添加標準 DTO 後綴檢查
-        if (className.endsWith("DTO")
-                || className.endsWith("Dto")
-                || className.endsWith("Request")
-                || className.endsWith("Response")
-                || className.endsWith("Rq")
-                || className.endsWith("Rs")
-                || className.endsWith("Tranrq")
-                || className.endsWith("Tranrs")
-                || className.endsWith("Req")
-                || className.endsWith("Resp")
-                || className.endsWith("Detail")
-                || className.endsWith("BalanceDetail")
-                || className.endsWith("Entity")
-                || className.endsWith("Qry")
-                || className.endsWith("Query")
-                || className.endsWith("Model")
-                || className.endsWith("Info")
-                || className.endsWith("Data")
-                || className.endsWith("Bean")
-                || className.endsWith("VO")
-                || className.endsWith("Vo")) {
-            return true;
+        // 使用設置中的自定義後綴列表進行檢查
+        List<String> suffixes = JavaBeanToTypescriptInterfaceSettingsState.getInstance().getCustomDtoSuffixes();
+        for (String suffix : suffixes) {
+            if (className.endsWith(suffix)) {
+                return true;
+            }
         }
 
         // 檢查類中是否存在公開的字段或者 getter/setter 方法

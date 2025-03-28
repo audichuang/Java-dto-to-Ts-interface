@@ -1,72 +1,86 @@
 package org.freeone.javabean.tsinterface.setting;
 
 import com.intellij.openapi.options.Configurable;
-import com.intellij.openapi.options.ConfigurationException;
-import com.intellij.openapi.util.NlsContexts;
+import org.jetbrains.annotations.Nls;
 import org.jetbrains.annotations.Nullable;
 
 import javax.swing.*;
 
 /**
- * 右上角设置的面板类
- * <p>
- * https://plugins.jetbrains.com/docs/intellij/settings-tutorial.html#implement-the-configurable-interface
+ * 提供應用程序設置的用戶界面
  */
 public class JavaBeanToTypescriptInterfaceConfigurable implements Configurable {
+    private JavaBeanToTypescriptInterfaceSettingsComponent settingsComponent;
 
-    private JavaBeanToTypescriptInterfaceSettingsComponent mySettingsComponent;
-
-    @NlsContexts.ConfigurableName
+    @Nls(capitalization = Nls.Capitalization.Title)
     @Override
     public String getDisplayName() {
-        return "DTO To TS";
+        return "JavaBean To TypeScript Interface";
     }
 
     @Override
-    public @Nullable JComponent createComponent() {
-        mySettingsComponent = new JavaBeanToTypescriptInterfaceSettingsComponent();
-        return mySettingsComponent.getPanel();
+    public JComponent getPreferredFocusedComponent() {
+        return settingsComponent.getPanel();
+    }
+
+    @Nullable
+    @Override
+    public JComponent createComponent() {
+        settingsComponent = new JavaBeanToTypescriptInterfaceSettingsComponent();
+        return settingsComponent.getPanel();
     }
 
     @Override
     public boolean isModified() {
         JavaBeanToTypescriptInterfaceSettingsState settings = JavaBeanToTypescriptInterfaceSettingsState.getInstance();
-        boolean modified = mySettingsComponent.getUserNameText().equals(settings.userName);
-        modified |= mySettingsComponent.getEnableDataToStringCheckBox().isSelected() != settings.enableDataToString;
-        modified |= mySettingsComponent.getAllowFindClassInAllScopeCheckBox()
-                .isSelected() != settings.allowFindClassInAllScope;
-        modified |= mySettingsComponent.getIgnoreParentFieldCheckBox().isSelected() != settings.ignoreParentField;
-        modified |= mySettingsComponent.getUseAnnotationJsonPropertyCheckBox()
-                .isSelected() != settings.useAnnotationJsonProperty;
-        modified |= mySettingsComponent.getAddOptionalMarkToAllFieldsCheckBox()
-                .isSelected() != settings.addOptionalMarkToAllFields;
+        boolean modified = settingsComponent.getIgnoreParentField() != settings.ignoreParentField;
+        modified |= settingsComponent.getEnableDataToString() != settings.enableDataToString;
+        modified |= settingsComponent.getUseAnnotationJsonProperty() != settings.useAnnotationJsonProperty;
+        modified |= settingsComponent.getAllowFindClassInAllScope() != settings.allowFindClassInAllScope;
+        modified |= settingsComponent.getAddOptionalMarkToAllFields() != settings.addOptionalMarkToAllFields;
+        modified |= settingsComponent.getIgnoreSerialVersionUID() != settings.ignoreSerialVersionUID;
+
+        // 檢查DTO後綴列表是否有修改
+        if (settingsComponent.getCustomDtoSuffixes().size() != settings.customDtoSuffixes.size()) {
+            return true;
+        }
+
+        for (String suffix : settingsComponent.getCustomDtoSuffixes()) {
+            if (!settings.customDtoSuffixes.contains(suffix)) {
+                return true;
+            }
+        }
+
         return modified;
     }
 
     @Override
-    public void apply() throws ConfigurationException {
+    public void apply() {
         JavaBeanToTypescriptInterfaceSettingsState settings = JavaBeanToTypescriptInterfaceSettingsState.getInstance();
-        settings.userName = mySettingsComponent.getUserNameText();
-        settings.enableDataToString = mySettingsComponent.getEnableDataToStringCheckBox().isSelected();
-        settings.allowFindClassInAllScope = mySettingsComponent.getAllowFindClassInAllScopeCheckBox().isSelected();
-        settings.ignoreParentField = mySettingsComponent.getIgnoreParentFieldCheckBox().isSelected();
-        settings.useAnnotationJsonProperty = mySettingsComponent.getUseAnnotationJsonPropertyCheckBox().isSelected();
-        settings.addOptionalMarkToAllFields = mySettingsComponent.getAddOptionalMarkToAllFieldsCheckBox().isSelected();
+        settings.ignoreParentField = settingsComponent.getIgnoreParentField();
+        settings.enableDataToString = settingsComponent.getEnableDataToString();
+        settings.useAnnotationJsonProperty = settingsComponent.getUseAnnotationJsonProperty();
+        settings.allowFindClassInAllScope = settingsComponent.getAllowFindClassInAllScope();
+        settings.addOptionalMarkToAllFields = settingsComponent.getAddOptionalMarkToAllFields();
+        settings.ignoreSerialVersionUID = settingsComponent.getIgnoreSerialVersionUID();
+        settings.customDtoSuffixes.clear();
+        settings.customDtoSuffixes.addAll(settingsComponent.getCustomDtoSuffixes());
     }
 
     @Override
     public void reset() {
         JavaBeanToTypescriptInterfaceSettingsState settings = JavaBeanToTypescriptInterfaceSettingsState.getInstance();
-        mySettingsComponent.setUserNameText(settings.userName);
-        mySettingsComponent.getEnableDataToStringCheckBox().setSelected(settings.enableDataToString);
-        mySettingsComponent.getAllowFindClassInAllScopeCheckBox().setSelected(settings.allowFindClassInAllScope);
-        mySettingsComponent.getIgnoreParentFieldCheckBox().setSelected(settings.ignoreParentField);
-        mySettingsComponent.getUseAnnotationJsonPropertyCheckBox().setSelected(settings.useAnnotationJsonProperty);
-        mySettingsComponent.getAddOptionalMarkToAllFieldsCheckBox().setSelected(settings.addOptionalMarkToAllFields);
+        settingsComponent.setIgnoreParentField(settings.ignoreParentField);
+        settingsComponent.setEnableDataToString(settings.enableDataToString);
+        settingsComponent.setUseAnnotationJsonProperty(settings.useAnnotationJsonProperty);
+        settingsComponent.setAllowFindClassInAllScope(settings.allowFindClassInAllScope);
+        settingsComponent.setAddOptionalMarkToAllFields(settings.addOptionalMarkToAllFields);
+        settingsComponent.setIgnoreSerialVersionUID(settings.ignoreSerialVersionUID);
+        settingsComponent.setCustomDtoSuffixes(settings.customDtoSuffixes);
     }
 
     @Override
     public void disposeUIResources() {
-        mySettingsComponent = null;
+        settingsComponent = null;
     }
 }

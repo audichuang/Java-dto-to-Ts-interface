@@ -2,74 +2,181 @@ package org.freeone.javabean.tsinterface.setting;
 
 import com.intellij.ui.components.JBCheckBox;
 import com.intellij.ui.components.JBLabel;
+import com.intellij.ui.components.JBScrollPane;
 import com.intellij.ui.components.JBTextField;
 import com.intellij.util.ui.FormBuilder;
+import com.intellij.util.ui.JBUI;
 import org.jetbrains.annotations.NotNull;
 
 import javax.swing.*;
+import javax.swing.table.DefaultTableModel;
+import java.awt.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Objects;
+import java.util.Vector;
 
 /**
- * 設置組件，提供 UI 介面
+ * 設置界面組件
  */
 public class JavaBeanToTypescriptInterfaceSettingsComponent {
+    private final JPanel mainPanel;
+    private final JBCheckBox ignoreParentField = new JBCheckBox("忽略父類字段");
+    private final JBCheckBox enableDataToString = new JBCheckBox("日期轉字符串");
+    private final JBCheckBox useAnnotationJsonProperty = new JBCheckBox("使用 @JsonProperty 註解");
+    private final JBCheckBox allowFindClassInAllScope = new JBCheckBox("允許在所有範圍內查找類");
+    private final JBCheckBox addOptionalMarkToAllFields = new JBCheckBox("給所有字段添加可選標記 (?: )");
+    private final JBCheckBox ignoreSerialVersionUID = new JBCheckBox("忽略序列化ID (serialVersionUID)");
 
-    private final JPanel myMainPanel;
-    private final JBTextField userNameText = new JBTextField();
-    private final JBCheckBox enableDataToStringCheckBox = new JBCheckBox("啟用在 toString() 中使用 Data 註解生成的 toString");
-    private final JBCheckBox useAnnotationJsonPropertyCheckBox = new JBCheckBox("使用 @JsonProperty 註解中的屬性名");
-    private final JBCheckBox allowFindClassInAllScopeCheckBox = new JBCheckBox("允許在項目所有範圍內查找類（推薦）");
-    private final JBCheckBox ignoreParentFieldCheckBox = new JBCheckBox("忽略父類屬性");
-    private final JBCheckBox addOptionalMarkToAllFieldsCheckBox = new JBCheckBox("為所有屬性添加可選標記（?:）");
+    // 自定義 DTO 後綴列表
+    private final DefaultTableModel dtoSuffixTableModel;
+    private final JTable dtoSuffixTable;
+    private final JBTextField newSuffixField = new JBTextField();
+    private final JButton addSuffixButton = new JButton("添加");
+    private final JButton removeSuffixButton = new JButton("移除");
 
     public JavaBeanToTypescriptInterfaceSettingsComponent() {
-        // 添加提示信息
-        addOptionalMarkToAllFieldsCheckBox.setToolTipText("選中：所有屬性都添加可選問號（?:）；未選中：所有屬性都不加問號（:）");
+        // 初始化 DTO 後綴表格
+        dtoSuffixTableModel = new DefaultTableModel(new String[] { "DTO 後綴" }, 0);
+        dtoSuffixTable = new JTable(dtoSuffixTableModel);
+        dtoSuffixTable.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+        JBScrollPane tableScrollPane = new JBScrollPane(dtoSuffixTable);
+        tableScrollPane.setPreferredSize(new Dimension(300, 200));
 
-        myMainPanel = FormBuilder.createFormBuilder()
-                .addLabeledComponent(new JBLabel("用戶名: "), userNameText, 1, false)
-                .addComponent(enableDataToStringCheckBox, 1)
-                .addComponent(useAnnotationJsonPropertyCheckBox, 1)
-                .addComponent(allowFindClassInAllScopeCheckBox, 1)
-                .addComponent(ignoreParentFieldCheckBox, 1)
-                .addComponent(addOptionalMarkToAllFieldsCheckBox, 1)
+        // 後綴添加面板
+        JPanel suffixAddPanel = new JPanel(new BorderLayout());
+        suffixAddPanel.add(newSuffixField, BorderLayout.CENTER);
+        suffixAddPanel.add(addSuffixButton, BorderLayout.EAST);
+
+        // 後綴操作面板
+        JPanel suffixActionPanel = new JPanel(new BorderLayout());
+        suffixActionPanel.add(suffixAddPanel, BorderLayout.CENTER);
+        suffixActionPanel.add(removeSuffixButton, BorderLayout.EAST);
+
+        // 後綴設置面板
+        JPanel suffixPanel = new JPanel(new BorderLayout());
+        suffixPanel.add(new JBLabel("DTO 類後綴列表:"), BorderLayout.NORTH);
+        suffixPanel.add(tableScrollPane, BorderLayout.CENTER);
+        suffixPanel.add(suffixActionPanel, BorderLayout.SOUTH);
+        suffixPanel.setBorder(JBUI.Borders.empty(10));
+
+        // 添加按鈕事件
+        addSuffixButton.addActionListener(e -> {
+            String suffix = newSuffixField.getText().trim();
+            if (!suffix.isEmpty() && !containsSuffix(suffix)) {
+                dtoSuffixTableModel.addRow(new Object[] { suffix });
+                newSuffixField.setText("");
+            }
+        });
+
+        // 移除按鈕事件
+        removeSuffixButton.addActionListener(e -> {
+            int selectedRow = dtoSuffixTable.getSelectedRow();
+            if (selectedRow != -1) {
+                dtoSuffixTableModel.removeRow(selectedRow);
+            }
+        });
+
+        // 構建主面板
+        mainPanel = FormBuilder.createFormBuilder()
+                .addComponent(new JBLabel("基本設置"))
+                .addComponent(ignoreParentField)
+                .addComponent(enableDataToString)
+                .addComponent(useAnnotationJsonProperty)
+                .addComponent(allowFindClassInAllScope)
+                .addComponent(addOptionalMarkToAllFields)
+                .addComponent(ignoreSerialVersionUID)
+                .addComponent(suffixPanel)
                 .addComponentFillVertically(new JPanel(), 0)
                 .getPanel();
     }
 
     public JPanel getPanel() {
-        return myMainPanel;
+        return mainPanel;
     }
 
-    public JComponent getPreferredFocusedComponent() {
-        return userNameText;
+    // 檢查後綴是否已存在
+    private boolean containsSuffix(String suffix) {
+        for (int i = 0; i < dtoSuffixTableModel.getRowCount(); i++) {
+            if (Objects.equals(dtoSuffixTableModel.getValueAt(i, 0), suffix)) {
+                return true;
+            }
+        }
+        return false;
     }
 
-    @NotNull
-    public String getUserNameText() {
-        return userNameText.getText();
+    // 獲取界面上的設置值
+    public boolean getIgnoreParentField() {
+        return ignoreParentField.isSelected();
     }
 
-    public void setUserNameText(@NotNull String newText) {
-        userNameText.setText(newText);
+    public boolean getEnableDataToString() {
+        return enableDataToString.isSelected();
     }
 
-    public JBCheckBox getEnableDataToStringCheckBox() {
-        return enableDataToStringCheckBox;
+    public boolean getUseAnnotationJsonProperty() {
+        return useAnnotationJsonProperty.isSelected();
     }
 
-    public JBCheckBox getUseAnnotationJsonPropertyCheckBox() {
-        return useAnnotationJsonPropertyCheckBox;
+    public boolean getAllowFindClassInAllScope() {
+        return allowFindClassInAllScope.isSelected();
     }
 
-    public JBCheckBox getAllowFindClassInAllScopeCheckBox() {
-        return allowFindClassInAllScopeCheckBox;
+    public boolean getAddOptionalMarkToAllFields() {
+        return addOptionalMarkToAllFields.isSelected();
     }
 
-    public JBCheckBox getIgnoreParentFieldCheckBox() {
-        return ignoreParentFieldCheckBox;
+    public boolean getIgnoreSerialVersionUID() {
+        return ignoreSerialVersionUID.isSelected();
     }
 
-    public JBCheckBox getAddOptionalMarkToAllFieldsCheckBox() {
-        return addOptionalMarkToAllFieldsCheckBox;
+    public List<String> getCustomDtoSuffixes() {
+        List<String> suffixes = new ArrayList<>();
+        for (int i = 0; i < dtoSuffixTableModel.getRowCount(); i++) {
+            String suffix = (String) dtoSuffixTableModel.getValueAt(i, 0);
+            if (suffix != null && !suffix.isEmpty()) {
+                suffixes.add(suffix);
+            }
+        }
+        return suffixes;
+    }
+
+    // 設置界面值
+    public void setIgnoreParentField(boolean value) {
+        ignoreParentField.setSelected(value);
+    }
+
+    public void setEnableDataToString(boolean value) {
+        enableDataToString.setSelected(value);
+    }
+
+    public void setUseAnnotationJsonProperty(boolean value) {
+        useAnnotationJsonProperty.setSelected(value);
+    }
+
+    public void setAllowFindClassInAllScope(boolean value) {
+        allowFindClassInAllScope.setSelected(value);
+    }
+
+    public void setAddOptionalMarkToAllFields(boolean value) {
+        addOptionalMarkToAllFields.setSelected(value);
+    }
+
+    public void setIgnoreSerialVersionUID(boolean value) {
+        ignoreSerialVersionUID.setSelected(value);
+    }
+
+    public void setCustomDtoSuffixes(List<String> suffixes) {
+        // 清空表格
+        while (dtoSuffixTableModel.getRowCount() > 0) {
+            dtoSuffixTableModel.removeRow(0);
+        }
+
+        // 添加新數據
+        for (String suffix : suffixes) {
+            if (suffix != null && !suffix.isEmpty()) {
+                dtoSuffixTableModel.addRow(new Object[] { suffix });
+            }
+        }
     }
 }

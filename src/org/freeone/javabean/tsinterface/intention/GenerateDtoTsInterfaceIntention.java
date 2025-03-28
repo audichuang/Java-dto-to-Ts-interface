@@ -18,6 +18,7 @@ import com.intellij.util.IncorrectOperationException;
 import org.freeone.javabean.tsinterface.service.DtoTypescriptGeneratorService;
 import org.freeone.javabean.tsinterface.swing.TypescriptInterfaceShowerWrapper;
 import org.freeone.javabean.tsinterface.util.TypescriptContentGenerator;
+import org.freeone.javabean.tsinterface.setting.JavaBeanToTypescriptInterfaceSettingsState;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import com.intellij.notification.Notification;
@@ -260,14 +261,12 @@ public class GenerateDtoTsInterfaceIntention extends PsiElementBaseIntentionActi
             return false;
         }
 
-        // 添加标准 DTO 后缀检查
-        if (className.endsWith("DTO") || className.endsWith("Dto") ||
-                className.endsWith("Request") || className.endsWith("Response") ||
-                className.endsWith("Rq") || className.endsWith("Rs") ||
-                className.endsWith("Tranrq") || className.endsWith("Tranrs") ||
-                className.endsWith("Req") || className.endsWith("Resp") ||
-                className.endsWith("Detail")) {
-            return true;
+        // 使用設置中的自定義後綴列表進行檢查
+        List<String> suffixes = JavaBeanToTypescriptInterfaceSettingsState.getInstance().getCustomDtoSuffixes();
+        for (String suffix : suffixes) {
+            if (className.endsWith(suffix)) {
+                return true;
+            }
         }
 
         // 检查类中是否存在公开的字段或者 getter/setter 方法
@@ -309,9 +308,25 @@ public class GenerateDtoTsInterfaceIntention extends PsiElementBaseIntentionActi
             return false;
         }
 
-        // 只對帶有 RequestMapping 相關註解的方法啟用
-        PsiAnnotation[] annotations = method.getAnnotations();
-        for (PsiAnnotation annotation : annotations) {
+        // 檢查是否在控制器類中
+        PsiClass containingClass = method.getContainingClass();
+        if (containingClass == null) {
+            return false;
+        }
+
+        // 檢查類是否有 Controller 相關註解
+        PsiAnnotation[] classAnnotations = containingClass.getAnnotations();
+        for (PsiAnnotation annotation : classAnnotations) {
+            String qualifiedName = annotation.getQualifiedName();
+            if (qualifiedName != null && (qualifiedName.endsWith("Controller") ||
+                    qualifiedName.endsWith("RestController"))) {
+                return true;
+            }
+        }
+
+        // 檢查方法是否有 RequestMapping 相關註解
+        PsiAnnotation[] methodAnnotations = method.getAnnotations();
+        for (PsiAnnotation annotation : methodAnnotations) {
             String qualifiedName = annotation.getQualifiedName();
             if (qualifiedName != null && (qualifiedName.endsWith("RequestMapping") ||
                     qualifiedName.endsWith("GetMapping") ||

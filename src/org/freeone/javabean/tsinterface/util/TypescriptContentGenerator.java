@@ -209,6 +209,13 @@ public class TypescriptContentGenerator {
                 contentBuilder.append("interface ").append(classNameWithoutPackage).append(" {\n");
                 for (int i = 0; i < fields.length; i++) {
                     PsiField fieldItem = fields[i];
+
+                    // 檢查是否需要忽略 serialVersionUID
+                    if (JavaBeanToTypescriptInterfaceSettingsState.getInstance().ignoreSerialVersionUID &&
+                            "serialVersionUID".equals(fieldItem.getName())) {
+                        continue;
+                    }
+
                     String documentText = "";
                     // 获取注释
                     PsiDocComment docComment = fieldItem.getDocComment();

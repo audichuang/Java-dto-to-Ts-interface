@@ -241,6 +241,13 @@ public class TypescriptUtils {
         PsiMethod[] allMethods = aClass.getAllMethods();
         for (int i = 0; i < fields.length; i++) {
             PsiField fieldItem = fields[i];
+
+            // 檢查是否需要忽略 serialVersionUID
+            if (JavaBeanToTypescriptInterfaceSettingsState.getInstance().ignoreSerialVersionUID &&
+                    "serialVersionUID".equals(fieldItem.getName())) {
+                continue;
+            }
+
             // 获取注释
             processDocComment(interfaceContent, fieldItem);
             String fieldName = fieldItem.getName();
