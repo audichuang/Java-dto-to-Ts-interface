@@ -4,8 +4,14 @@ import com.intellij.ui.components.JBCheckBox;
 import com.intellij.ui.components.JBLabel;
 import com.intellij.ui.components.JBScrollPane;
 import com.intellij.ui.components.JBTextField;
+import com.intellij.ui.table.JBTable;
 import com.intellij.util.ui.FormBuilder;
 import com.intellij.util.ui.JBUI;
+import com.intellij.ui.components.panels.VerticalLayout;
+import com.intellij.ui.IdeBorderFactory;
+import com.intellij.ui.CollectionListModel;
+import com.intellij.ui.ToolbarDecorator;
+import com.intellij.ui.ListCellRendererWrapper;
 import org.jetbrains.annotations.NotNull;
 
 import javax.swing.*;
@@ -14,81 +20,124 @@ import java.awt.*;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
-import java.util.Vector;
 
 /**
  * 設置界面組件
  */
 public class JavaBeanToTypescriptInterfaceSettingsComponent {
     private final JPanel mainPanel;
+
+    // 基本設定區塊
+    private final JPanel basicSettingsPanel;
     private final JBCheckBox ignoreParentField = new JBCheckBox("忽略父類字段");
-    private final JBCheckBox enableDataToString = new JBCheckBox("日期轉字符串");
+    private final JBCheckBox enableDataToString = new JBCheckBox("日期轉字符串 (java.util.Date)");
     private final JBCheckBox useAnnotationJsonProperty = new JBCheckBox("使用 @JsonProperty 註解");
     private final JBCheckBox allowFindClassInAllScope = new JBCheckBox("允許在所有範圍內查找類");
     private final JBCheckBox addOptionalMarkToAllFields = new JBCheckBox("給所有字段添加可選標記 (?: )");
     private final JBCheckBox ignoreSerialVersionUID = new JBCheckBox("忽略序列化ID (serialVersionUID)");
 
-    // 自定義 DTO 後綴列表
-    private final DefaultTableModel dtoSuffixTableModel;
-    private final JTable dtoSuffixTable;
-    private final JBTextField newSuffixField = new JBTextField();
-    private final JButton addSuffixButton = new JButton("添加");
-    private final JButton removeSuffixButton = new JButton("移除");
+    // DTO 後綴設定區塊
+    private final JPanel dtoSuffixesPanel;
+    private final DefaultTableModel dtoSuffixTableModel = new DefaultTableModel(new String[] { "DTO 後綴" }, 0) {
+        @Override
+        public boolean isCellEditable(int row, int column) {
+            return true; // 允許直接編輯表格單元格
+        }
+    };
+    private final JBTable dtoSuffixTable = new JBTable(dtoSuffixTableModel);
+    private final JBTextField newSuffixField = new JBTextField(15);
+    private final JButton addSuffixButton = new JButton("新增");
+    private final JButton removeSuffixButton = new JButton("刪除");
 
     public JavaBeanToTypescriptInterfaceSettingsComponent() {
-        // 初始化 DTO 後綴表格
-        dtoSuffixTableModel = new DefaultTableModel(new String[] { "DTO 後綴" }, 0);
-        dtoSuffixTable = new JTable(dtoSuffixTableModel);
+        // 初始化表格屬性
+        dtoSuffixTable.getColumnModel().getColumn(0).setPreferredWidth(200);
         dtoSuffixTable.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
-        JBScrollPane tableScrollPane = new JBScrollPane(dtoSuffixTable);
-        tableScrollPane.setPreferredSize(new Dimension(300, 200));
+        dtoSuffixTable.setShowGrid(true);
+        dtoSuffixTable.setRowHeight(30);
 
-        // 後綴添加面板
-        JPanel suffixAddPanel = new JPanel(new BorderLayout());
-        suffixAddPanel.add(newSuffixField, BorderLayout.CENTER);
-        suffixAddPanel.add(addSuffixButton, BorderLayout.EAST);
+        // 基本設定區塊
+        basicSettingsPanel = createBasicSettingsPanel();
 
-        // 後綴操作面板
-        JPanel suffixActionPanel = new JPanel(new BorderLayout());
-        suffixActionPanel.add(suffixAddPanel, BorderLayout.CENTER);
-        suffixActionPanel.add(removeSuffixButton, BorderLayout.EAST);
-
-        // 後綴設置面板
-        JPanel suffixPanel = new JPanel(new BorderLayout());
-        suffixPanel.add(new JBLabel("DTO 類後綴列表:"), BorderLayout.NORTH);
-        suffixPanel.add(tableScrollPane, BorderLayout.CENTER);
-        suffixPanel.add(suffixActionPanel, BorderLayout.SOUTH);
-        suffixPanel.setBorder(JBUI.Borders.empty(10));
-
-        // 添加按鈕事件
-        addSuffixButton.addActionListener(e -> {
-            String suffix = newSuffixField.getText().trim();
-            if (!suffix.isEmpty() && !containsSuffix(suffix)) {
-                dtoSuffixTableModel.addRow(new Object[] { suffix });
-                newSuffixField.setText("");
-            }
-        });
-
-        // 移除按鈕事件
-        removeSuffixButton.addActionListener(e -> {
-            int selectedRow = dtoSuffixTable.getSelectedRow();
-            if (selectedRow != -1) {
-                dtoSuffixTableModel.removeRow(selectedRow);
-            }
-        });
+        // DTO 後綴設定區塊
+        dtoSuffixesPanel = createDtoSuffixesPanel();
 
         // 構建主面板
-        mainPanel = FormBuilder.createFormBuilder()
-                .addComponent(new JBLabel("基本設置"))
-                .addComponent(ignoreParentField)
-                .addComponent(enableDataToString)
-                .addComponent(useAnnotationJsonProperty)
-                .addComponent(allowFindClassInAllScope)
-                .addComponent(addOptionalMarkToAllFields)
-                .addComponent(ignoreSerialVersionUID)
-                .addComponent(suffixPanel)
-                .addComponentFillVertically(new JPanel(), 0)
-                .getPanel();
+        mainPanel = new JPanel(new BorderLayout());
+        JPanel contentPanel = new JPanel(new VerticalLayout(10));
+        contentPanel.add(basicSettingsPanel);
+        contentPanel.add(dtoSuffixesPanel);
+        contentPanel.setBorder(JBUI.Borders.empty(10));
+
+        mainPanel.add(contentPanel, BorderLayout.NORTH);
+    }
+
+    private JPanel createBasicSettingsPanel() {
+        JPanel panel = new JPanel(new GridLayout(0, 1, 0, 5));
+        panel.setBorder(IdeBorderFactory.createTitledBorder("基本設定", false));
+        panel.setBorder(JBUI.Borders.empty(5, 10, 10, 10));
+
+        // 添加複選框並設置提示說明
+        panel.add(ignoreParentField);
+        ignoreParentField.setToolTipText("生成時不包含父類字段，僅包含當前類的字段");
+
+        panel.add(enableDataToString);
+        enableDataToString.setToolTipText("把 Date 類型轉為 string 類型而不是 any");
+
+        panel.add(useAnnotationJsonProperty);
+        useAnnotationJsonProperty.setToolTipText("優先使用 @JsonProperty 註解中指定的屬性名");
+
+        panel.add(allowFindClassInAllScope);
+        allowFindClassInAllScope.setToolTipText("允許在項目的所有範圍內查找類定義");
+
+        panel.add(addOptionalMarkToAllFields);
+        addOptionalMarkToAllFields.setToolTipText("為 TypeScript 接口中的所有屬性添加可選標記 (?:)");
+
+        panel.add(ignoreSerialVersionUID);
+        ignoreSerialVersionUID.setToolTipText("在生成的 TypeScript 接口中忽略 serialVersionUID 字段");
+
+        return panel;
+    }
+
+    private JPanel createDtoSuffixesPanel() {
+        // 表格容器面板
+        JPanel tablePanel = ToolbarDecorator.createDecorator(dtoSuffixTable)
+                .setAddAction(button -> {
+                    String suffix = newSuffixField.getText().trim();
+                    if (!suffix.isEmpty() && !containsSuffix(suffix)) {
+                        dtoSuffixTableModel.addRow(new Object[] { suffix });
+                        newSuffixField.setText("");
+                    }
+                })
+                .setRemoveAction(button -> {
+                    int selectedRow = dtoSuffixTable.getSelectedRow();
+                    if (selectedRow != -1) {
+                        dtoSuffixTableModel.removeRow(selectedRow);
+                    }
+                })
+                .disableUpDownActions()
+                .createPanel();
+
+        // 新增後綴區域
+        JPanel addPanel = new JPanel(new BorderLayout(5, 0));
+        addPanel.add(new JBLabel("新增後綴:"), BorderLayout.WEST);
+        addPanel.add(newSuffixField, BorderLayout.CENTER);
+        addPanel.setBorder(JBUI.Borders.empty(10, 0, 5, 0));
+
+        // 面板容器
+        JPanel panel = new JPanel(new BorderLayout());
+        panel.setBorder(IdeBorderFactory.createTitledBorder("DTO 類後綴設定", false));
+
+        // 說明文字
+        JLabel descriptionLabel = new JBLabel("<html>設定用於識別 DTO 類的後綴名稱。插件會自動識別符合這些後綴的類作為 DTO 進行轉換。<br>" +
+                "如需添加自定義後綴，請在下方輸入框中輸入並點擊 + 按鈕。</html>");
+        descriptionLabel.setBorder(JBUI.Borders.empty(0, 10, 10, 10));
+
+        panel.add(descriptionLabel, BorderLayout.NORTH);
+        panel.add(tablePanel, BorderLayout.CENTER);
+        panel.add(addPanel, BorderLayout.SOUTH);
+
+        return panel;
     }
 
     public JPanel getPanel() {

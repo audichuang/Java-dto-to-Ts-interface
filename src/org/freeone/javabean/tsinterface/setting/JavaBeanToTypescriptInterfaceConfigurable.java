@@ -7,7 +7,7 @@ import org.jetbrains.annotations.Nullable;
 import javax.swing.*;
 
 /**
- * 提供應用程序設置的用戶界面
+ * 提供Java DTO轉TypeScript接口的設定界面
  */
 public class JavaBeanToTypescriptInterfaceConfigurable implements Configurable {
     private JavaBeanToTypescriptInterfaceSettingsComponent settingsComponent;
@@ -15,7 +15,12 @@ public class JavaBeanToTypescriptInterfaceConfigurable implements Configurable {
     @Nls(capitalization = Nls.Capitalization.Title)
     @Override
     public String getDisplayName() {
-        return "JavaBean To TypeScript Interface";
+        return "Java DTO To TypeScript";
+    }
+
+    @Override
+    public String getHelpTopic() {
+        return "Java DTO To TypeScript Interface Settings";
     }
 
     @Override
