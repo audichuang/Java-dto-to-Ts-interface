@@ -122,7 +122,7 @@ public class DtoTypescriptGeneratorService {
      */
     public static void saveToFiles(Project project, Map<String, String> contentMap) {
         FileChooserDescriptor chooserDescriptor = CommonUtils.createFileChooserDescriptor("選擇一個文件夾",
-                "TypeScript 聲明文件（.d.ts）將保存在此文件夾中");
+                "TypeScript 介面文件（.ts）將保存在此文件夾中");
         VirtualFile savePathFile = FileChooser.chooseFile(chooserDescriptor, null, null);
 
         if (savePathFile != null && savePathFile.isDirectory()) {
@@ -132,12 +132,13 @@ public class DtoTypescriptGeneratorService {
             for (Map.Entry<String, String> entry : contentMap.entrySet()) {
                 String fileName = entry.getKey();
                 String content = entry.getValue();
-                String interfaceFileSavePath = savePath + "/" + fileName + ".d.ts";
+                // 確保檔案名有 .ts 擴展名（不含 .d）
+                String interfaceFileSavePath = savePath + "/" + ensureTsExtension(fileName);
 
                 try (BufferedWriter bufferedWriter = new BufferedWriter(new OutputStreamWriter(
                         new FileOutputStream(interfaceFileSavePath, false), StandardCharsets.UTF_8))) {
                     bufferedWriter.write(content);
-                    successFiles.append(fileName).append(".d.ts, ");
+                    successFiles.append(fileName).append(".ts, ");
                 } catch (IOException e) {
                     e.printStackTrace();
                 }
@@ -153,6 +154,19 @@ public class DtoTypescriptGeneratorService {
     }
 
     /**
+     * 確保文件名有 .ts 擴展名（不含 .d）
+     */
+    private static String ensureTsExtension(String fileName) {
+        if (fileName.endsWith(".d.ts")) {
+            return fileName.substring(0, fileName.length() - 5) + ".ts";
+        } else if (fileName.endsWith(".ts")) {
+            return fileName;
+        } else {
+            return fileName + ".ts";
+        }
+    }
+
+    /**
      * 將生成的 TypeScript 接口複製到剪貼板
      */
     private static void copyToClipboard(Project project, Map<String, String> contentMap) {
@@ -163,8 +177,10 @@ public class DtoTypescriptGeneratorService {
             Transferable tText = new StringSelection(content);
             systemClipboard.setContents(tText, null);
 
-            // 不使用彈窗通知，只在控制台輸出
-            System.out.println("已將 TypeScript 接口複製到剪貼板");
+            // 使用通知而不是彈窗
+            Notification notification = notificationGroup.createNotification(
+                    "已將 TypeScript 接口複製到剪貼板", NotificationType.INFORMATION);
+            notification.setImportant(false).notify(project);
         } else {
             // 如果有多個 DTO 類，合併內容後複製
             StringBuilder mergedContent = new StringBuilder();
@@ -177,8 +193,11 @@ public class DtoTypescriptGeneratorService {
             Transferable tText = new StringSelection(mergedContent.toString());
             systemClipboard.setContents(tText, null);
 
-            // 不使用彈窗通知，只在控制台輸出
-            System.out.println("已將 " + contentMap.size() + " 個 TypeScript 接口複製到剪貼板");
+            // 使用通知而不是彈窗
+            Notification notification = notificationGroup.createNotification(
+                    "已將 " + contentMap.size() + " 個 TypeScript 接口複製到剪貼板",
+                    NotificationType.INFORMATION);
+            notification.setImportant(false).notify(project);
         }
     }
 
@@ -190,85 +209,43 @@ public class DtoTypescriptGeneratorService {
             return;
         }
 
-        try {
-            // 準備顯示內容
-            final String mergedContent;
-            final String classNames;
-
-            if (contentMap.size() == 1) {
-                // 單個類處理
-                Map.Entry<String, String> entry = contentMap.entrySet().iterator().next();
-                mergedContent = entry.getValue();
-                classNames = entry.getKey();
-            } else {
-                // 多個類處理
-                StringBuilder contentBuilder = new StringBuilder();
-                StringBuilder namesBuilder = new StringBuilder();
+        // 使用 ApplicationManager 確保在 EDT 線程中執行 UI 操作
+        ApplicationManager.getApplication().invokeLater(() -> {
+            try {
+                // 合併內容
+                StringBuilder combinedContent = new StringBuilder();
+                StringBuilder classNamesBuilder = new StringBuilder();
 
                 for (Map.Entry<String, String> entry : contentMap.entrySet()) {
-                    if (namesBuilder.length() > 0) {
-                        namesBuilder.append(", ");
+                    combinedContent.append(entry.getValue()).append("\n\n");
+
+                    if (classNamesBuilder.length() > 0) {
+                        classNamesBuilder.append(", ");
                     }
-                    namesBuilder.append(entry.getKey());
-                    contentBuilder.append(entry.getValue()).append("\n\n");
+                    classNamesBuilder.append(entry.getKey());
                 }
 
-                mergedContent = contentBuilder.toString();
-                classNames = namesBuilder.toString();
+                // 創建顯示包裝器
+                TypescriptInterfaceShowerWrapper wrapper = new TypescriptInterfaceShowerWrapper();
+                wrapper.setContent(combinedContent.toString());
+
+                // 設置類名以生成建議檔名
+                if (classNamesBuilder.length() > 0) {
+                    wrapper.setClassName(classNamesBuilder.toString());
+                }
+
+                // 顯示對話框
+                wrapper.show();
+            } catch (Exception e) {
+                System.err.println("在編輯器中顯示內容時發生錯誤: " + e.getMessage());
+                e.printStackTrace();
+
+                // 使用通知而不是彈窗報錯
+                Notification notification = notificationGroup.createNotification(
+                        "顯示 TypeScript 接口失敗: " + e.getMessage(),
+                        NotificationType.ERROR);
+                notification.notify(project);
             }
-
-            // 確保在 EDT 和正確的模態狀態下執行
-            com.intellij.openapi.application.ApplicationManager.getApplication().invokeLater(() -> {
-                try {
-                    TypescriptInterfaceShowerWrapper wrapper = null;
-                    try {
-                        // 創建對話框
-                        wrapper = new TypescriptInterfaceShowerWrapper();
-                        // 設置類名和內容
-                        wrapper.setClassName(classNames);
-                        wrapper.setContent(mergedContent);
-
-                        // 顯示對話框
-                        final TypescriptInterfaceShowerWrapper finalWrapper = wrapper;
-                        // 再次使用 invokeLater 確保顯示在正確的模態狀態下進行
-                        com.intellij.openapi.application.ApplicationManager.getApplication().invokeLater(() -> {
-                            try {
-                                if (finalWrapper != null && !finalWrapper.isDisposed()) {
-                                    finalWrapper.show();
-                                }
-                            } catch (Exception e) {
-                                System.err.println("顯示對話框時發生錯誤: " + e.getMessage());
-                                e.printStackTrace();
-                                // 嘗試清理資源
-                                if (finalWrapper != null && !finalWrapper.isDisposed()) {
-                                    try {
-                                        finalWrapper.dispose();
-                                    } catch (Exception ex) {
-                                        // 忽略
-                                    }
-                                }
-                            }
-                        }, com.intellij.openapi.application.ModalityState.defaultModalityState());
-                    } catch (Exception e) {
-                        System.err.println("創建對話框時發生錯誤: " + e.getMessage());
-                        e.printStackTrace();
-                        // 清理資源
-                        if (wrapper != null && !wrapper.isDisposed()) {
-                            try {
-                                wrapper.dispose();
-                            } catch (Exception ex) {
-                                // 忽略
-                            }
-                        }
-                    }
-                } catch (Exception e) {
-                    System.err.println("準備顯示對話框時發生錯誤: " + e.getMessage());
-                    e.printStackTrace();
-                }
-            }, com.intellij.openapi.application.ModalityState.defaultModalityState());
-        } catch (Exception e) {
-            System.err.println("處理內容時發生錯誤: " + e.getMessage());
-            e.printStackTrace();
-        }
+        }, com.intellij.openapi.application.ModalityState.defaultModalityState());
     }
 }

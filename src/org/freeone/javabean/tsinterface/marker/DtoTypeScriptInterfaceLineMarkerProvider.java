@@ -159,13 +159,59 @@ public class DtoTypeScriptInterfaceLineMarkerProvider extends LineMarkerProvider
             return false;
         }
 
-        return className.endsWith("DTO")
+        // 添加標準 DTO 後綴檢查
+        if (className.endsWith("DTO")
                 || className.endsWith("Dto")
                 || className.endsWith("Request")
                 || className.endsWith("Response")
                 || className.endsWith("Rq")
                 || className.endsWith("Rs")
                 || className.endsWith("Tranrq")
-                || className.endsWith("Tranrs");
+                || className.endsWith("Tranrs")
+                || className.endsWith("Req")
+                || className.endsWith("Resp")
+                || className.endsWith("Detail")
+                || className.endsWith("BalanceDetail")
+                || className.endsWith("Entity")
+                || className.endsWith("Qry")
+                || className.endsWith("Query")
+                || className.endsWith("Model")
+                || className.endsWith("Info")
+                || className.endsWith("Data")
+                || className.endsWith("Bean")
+                || className.endsWith("VO")
+                || className.endsWith("Vo")) {
+            return true;
+        }
+
+        // 檢查類中是否存在公開的字段或者 getter/setter 方法
+        // 通常 DTO 類會包含多個公開字段或 getter/setter 方法
+        PsiField[] fields = psiClass.getFields();
+        if (fields.length > 0) {
+            int publicFieldCount = 0;
+            for (PsiField field : fields) {
+                if (field.hasModifierProperty(PsiModifier.PUBLIC)) {
+                    publicFieldCount++;
+                }
+            }
+            // 如果有多個公開字段，可能是數據傳輸對象
+            if (publicFieldCount > 2) {
+                return true;
+            }
+        }
+
+        // 檢查 getter/setter 方法
+        PsiMethod[] methods = psiClass.getMethods();
+        int getterSetterCount = 0;
+        for (PsiMethod method : methods) {
+            String methodName = method.getName();
+            if ((methodName.startsWith("get") || methodName.startsWith("set")) &&
+                    methodName.length() > 3 &&
+                    Character.isUpperCase(methodName.charAt(3))) {
+                getterSetterCount++;
+            }
+        }
+        // 如果有多個 getter/setter 方法，可能是 DTO
+        return getterSetterCount > 3;
     }
 }

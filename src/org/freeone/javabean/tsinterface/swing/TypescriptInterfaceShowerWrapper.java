@@ -11,6 +11,7 @@ import java.awt.datatransfer.Clipboard;
 import java.awt.datatransfer.StringSelection;
 import java.awt.datatransfer.Transferable;
 import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
 
 public class TypescriptInterfaceShowerWrapper extends DialogWrapper {
 
@@ -38,7 +39,7 @@ public class TypescriptInterfaceShowerWrapper extends DialogWrapper {
         JPanel fileNamePanel = new JPanel(new BorderLayout());
         JLabel fileNameLabel = new JLabel("建議檔名: ");
         fileNameField = new JTextField();
-        fileNameField.setEditable(false);
+        fileNameField.setEditable(true); // 將檔名欄位設為可編輯
         fileNamePanel.add(fileNameLabel, BorderLayout.WEST);
         fileNamePanel.add(fileNameField, BorderLayout.CENTER);
 
@@ -49,7 +50,18 @@ public class TypescriptInterfaceShowerWrapper extends DialogWrapper {
                 Clipboard clipboard = Toolkit.getDefaultToolkit().getSystemClipboard();
                 StringSelection selection = new StringSelection(text);
                 clipboard.setContents(selection, null);
-                JOptionPane.showMessageDialog(null, "已複製檔名到剪貼板", "提示", JOptionPane.INFORMATION_MESSAGE);
+
+                // 取消彈窗提示，改用按鈕文字變化提示
+                JButton button = (JButton) e.getSource();
+                String originalText = button.getText();
+                button.setText("已複製!");
+
+                // 1.5秒後恢復按鈕文字
+                Timer timer = new Timer(1500, evt -> {
+                    button.setText(originalText);
+                });
+                timer.setRepeats(false);
+                timer.start();
             }
         });
 
@@ -96,7 +108,7 @@ public class TypescriptInterfaceShowerWrapper extends DialogWrapper {
 
     private String generateFileName() {
         if (className == null || className.isEmpty()) {
-            return "typescript-interface.d.ts";
+            return "typescript-interface.ts";
         }
 
         // 處理多個類名的情況
@@ -120,15 +132,28 @@ public class TypescriptInterfaceShowerWrapper extends DialogWrapper {
             }
 
             if (hasRqRs && baseName != null) {
-                return baseName.toLowerCase() + ".d.ts";
+                return ensureDTsExtension(baseName.toLowerCase());
             } else {
                 // 如果沒有明顯的請求/響應對，取第一個類名
-                return classNames[0].trim().toLowerCase() + ".d.ts";
+                return ensureDTsExtension(classNames[0].trim().toLowerCase());
             }
         }
 
         // 單個類名
-        return className.toLowerCase() + ".d.ts";
+        return ensureDTsExtension(className.toLowerCase());
+    }
+
+    /**
+     * 確保文件名有 .ts 擴展名（不含 .d）
+     */
+    private String ensureDTsExtension(String fileName) {
+        if (fileName.endsWith(".d.ts")) {
+            return fileName.substring(0, fileName.length() - 5) + ".ts";
+        } else if (fileName.endsWith(".ts")) {
+            return fileName;
+        } else {
+            return fileName + ".ts";
+        }
     }
 
     @NotNull

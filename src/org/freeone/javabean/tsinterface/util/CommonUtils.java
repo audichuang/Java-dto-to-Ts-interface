@@ -343,8 +343,33 @@ public class CommonUtils {
     public static String getJsonPropertyValue(PsiField fieldItem, PsiMethod[] allMethods) {
         String result = null;
         String name = fieldItem.getName();
-        String getterMethodName = "get" + name.substring(0, 1).toUpperCase() + name.substring(1);
-        String setterMethodName = "set" + name.substring(0, 1).toUpperCase() + name.substring(1);
+
+        // 修正获取getter/setter方法名的逻辑
+        // 处理特殊情况：如果字段名以一个字母开头且第二个字母也是大写，保持第一个字母不变
+        // 例如：aBCField -> getaBCField，而不是 getABCField
+        String getterPrefix = "get";
+        String setterPrefix = "set";
+
+        // 处理布尔类型字段，可能使用is开头的getter
+        if (isBooleanType(fieldItem.getType())) {
+            getterPrefix = "is";
+        }
+
+        String methodSuffix;
+        if (name.length() > 1 && Character.isLowerCase(name.charAt(0)) && Character.isUpperCase(name.charAt(1))) {
+            // 如果第一个字符是小写，第二个字符是大写，保持第一个字符不变
+            methodSuffix = name;
+        } else {
+            // 正常情况，首字母大写
+            methodSuffix = name.substring(0, 1).toUpperCase() + name.substring(1);
+        }
+
+        String getterMethodName = getterPrefix + methodSuffix;
+        String setterMethodName = setterPrefix + methodSuffix;
+
+        // 另一种可能的getter名称（针对布尔值）
+        String alternativeGetterMethodName = "get" + methodSuffix;
+
         PsiAnnotation[] annotations = fieldItem.getAnnotations();
         for (PsiAnnotation annotation : annotations) {
             if (result != null) {
@@ -363,7 +388,6 @@ public class CommonUtils {
                                     result = literalValue;
                                 }
                             }
-
                         }
                     }
                 }
@@ -376,7 +400,8 @@ public class CommonUtils {
         if (result == null) {
             for (PsiMethod method : allMethods) {
                 if (method.getName().equalsIgnoreCase(getterMethodName)
-                        || method.getName().equalsIgnoreCase(setterMethodName)) {
+                        || method.getName().equalsIgnoreCase(setterMethodName)
+                        || method.getName().equalsIgnoreCase(alternativeGetterMethodName)) {
                     PsiAnnotation[] methodAnnotations = method.getAnnotations();
                     for (PsiAnnotation annotation : methodAnnotations) {
                         if (result != null) {
@@ -399,7 +424,6 @@ public class CommonUtils {
                                                 break;
                                             }
                                         }
-
                                     }
                                 }
                             }

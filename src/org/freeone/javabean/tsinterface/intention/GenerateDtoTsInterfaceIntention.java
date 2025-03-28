@@ -20,6 +20,9 @@ import org.freeone.javabean.tsinterface.swing.TypescriptInterfaceShowerWrapper;
 import org.freeone.javabean.tsinterface.util.TypescriptContentGenerator;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import com.intellij.notification.Notification;
+import com.intellij.notification.NotificationGroupManager;
+import com.intellij.notification.NotificationType;
 
 import javax.swing.*;
 import javax.swing.SwingUtilities;
@@ -144,12 +147,12 @@ public class GenerateDtoTsInterfaceIntention extends PsiElementBaseIntentionActi
         Transferable tText = new StringSelection(content);
         systemClipboard.setContents(tText, null);
 
-        // 移除彈窗提示，改用更不擾人的方式
-        System.out.println("已將 TypeScript 接口複製到剪貼板，長度: " + content.length());
-
-        // 如果真的需要向用戶顯示提示，可以使用狀態欄通知，但不推薦彈窗
-        // Messages.showMessageDialog("已將 TypeScript 接口複製到剪貼板", "提示",
-        // Messages.getInformationIcon());
+        // 使用通知而不是彈窗
+        Notification notification = com.intellij.notification.NotificationGroupManager.getInstance()
+                .getNotificationGroup("JavaDtoToTypescriptInterface")
+                .createNotification("已將 TypeScript 接口複製到剪貼板",
+                        com.intellij.notification.NotificationType.INFORMATION);
+        notification.setImportant(false).notify(project);
     }
 
     private void showInTextEditor(String content) {
@@ -257,14 +260,45 @@ public class GenerateDtoTsInterfaceIntention extends PsiElementBaseIntentionActi
             return false;
         }
 
-        return className.endsWith("DTO")
-                || className.endsWith("Dto")
-                || className.endsWith("Request")
-                || className.endsWith("Response")
-                || className.endsWith("Rq")
-                || className.endsWith("Rs")
-                || className.endsWith("Tranrq")
-                || className.endsWith("Tranrs");
+        // 添加标准 DTO 后缀检查
+        if (className.endsWith("DTO") || className.endsWith("Dto") ||
+                className.endsWith("Request") || className.endsWith("Response") ||
+                className.endsWith("Rq") || className.endsWith("Rs") ||
+                className.endsWith("Tranrq") || className.endsWith("Tranrs") ||
+                className.endsWith("Req") || className.endsWith("Resp") ||
+                className.endsWith("Detail")) {
+            return true;
+        }
+
+        // 检查类中是否存在公开的字段或者 getter/setter 方法
+        // 通常 DTO 类会包含多个公开字段或 getter/setter 方法
+        PsiField[] fields = psiClass.getFields();
+        if (fields.length > 0) {
+            int publicFieldCount = 0;
+            for (PsiField field : fields) {
+                if (field.hasModifierProperty(PsiModifier.PUBLIC)) {
+                    publicFieldCount++;
+                }
+            }
+            // 如果有多个公开字段，可能是数据传输对象
+            if (publicFieldCount > 2) {
+                return true;
+            }
+        }
+
+        // 检查 getter/setter 方法
+        PsiMethod[] methods = psiClass.getMethods();
+        int getterSetterCount = 0;
+        for (PsiMethod method : methods) {
+            String methodName = method.getName();
+            if ((methodName.startsWith("get") || methodName.startsWith("set")) &&
+                    methodName.length() > 3 &&
+                    Character.isUpperCase(methodName.charAt(3))) {
+                getterSetterCount++;
+            }
+        }
+        // 如果有多个 getter/setter 方法，可能是 DTO
+        return getterSetterCount > 3;
     }
 
     @Override
