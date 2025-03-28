@@ -23,7 +23,7 @@ public final class JavaBeanToTypescriptInterfaceSettingsState
 
     public boolean enableDataToString = false;
 
-    public boolean useAnnotationJsonProperty = false;
+    public boolean useAnnotationJsonProperty = true;
 
     public boolean allowFindClassInAllScope = true;
 

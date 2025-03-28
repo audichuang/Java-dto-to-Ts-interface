@@ -343,8 +343,8 @@ public class CommonUtils {
     public static String getJsonPropertyValue(PsiField fieldItem, PsiMethod[] allMethods) {
         String result = null;
         String name = fieldItem.getName();
-        String getterMethodName = "get" + name;
-        String setterMethodName = "set" + name;
+        String getterMethodName = "get" + name.substring(0, 1).toUpperCase() + name.substring(1);
+        String setterMethodName = "set" + name.substring(0, 1).toUpperCase() + name.substring(1);
         PsiAnnotation[] annotations = fieldItem.getAnnotations();
         for (PsiAnnotation annotation : annotations) {
             if (result != null) {
