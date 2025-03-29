@@ -721,16 +721,16 @@ public class TypescriptContentGenerator {
         return content;
     }
 
-    // 新增处理接口名称的方法
+    // 修改處理接口名稱的方法
     private static String processInterfaceName(Project project, PsiClass psiClass, String originalName) {
-        // 如果未启用电文代号命名，直接返回原名称
+        // 如果未啟用電文代號命名，直接返回原名稱
         if (!CommonUtils.getSettings().isUseTransactionCodePrefix()) {
             return originalName;
         }
 
         String qualifiedName = psiClass.getQualifiedName();
 
-        // 檢查是否為泛型的容器類（如ResponseTemplate等），如果設置為僅處理泛型DTO，則跳過這些類
+        // 檢查是否為泛型的容器類，如果設置為僅處理泛型DTO，則跳過這些類
         if (CommonUtils.getSettings().isOnlyProcessGenericDto()) {
             boolean isContainer = isContainerClass(psiClass);
             if (isContainer) {
@@ -748,21 +748,21 @@ public class TypescriptContentGenerator {
             }
         }
 
-        // 检查是否为嵌套类
+        // 檢查是否為嵌套類
         boolean isNested = qualifiedName != null && qualifiedName.contains("$");
         if (isNested) {
-            // 获取外部类全限定名
+            // 獲取外部類全限定名
             String outerClassName = qualifiedName.substring(0, qualifiedName.indexOf("$"));
             PsiClass outerClass = CommonUtils.findPsiClass(project, CommonUtils.findPsiType(project, outerClassName));
 
             if (outerClass != null) {
-                // 获取外部类的接口名称
+                // 獲取外部類的接口名稱
                 String outerInterfaceName = processInterfaceName(project, outerClass, outerClass.getName());
 
-                // 提取电文代号前缀 (如 "QRYSTATEMENTS")
+                // 提取電文代號前綴 (如 "QRYSTATEMENTS")
                 String transactionCodePrefix = "";
                 if (outerInterfaceName.contains("Req") || outerInterfaceName.contains("Resp")) {
-                    // 尝试提取前缀
+                    // 嘗試提取前綴
                     int suffixIndex = Math.max(
                             outerInterfaceName.indexOf("Req"),
                             outerInterfaceName.indexOf("Resp"));
@@ -772,39 +772,45 @@ public class TypescriptContentGenerator {
                 }
 
                 if (!transactionCodePrefix.isEmpty()) {
-                    // 判断是请求还是响应
-                    boolean isRequest = isRequestClass(qualifiedName, originalName);
+                    // 新增：分析嵌套類的使用情境
+                    ClassUsageInfo usageInfo = analyzeClassUsage(project, psiClass);
+                    boolean isRequest = usageInfo.isRequest;
 
-                    // 处理嵌套类名称
+                    // 處理嵌套類名稱
                     return processNestedClassName(transactionCodePrefix, originalName, isRequest);
                 }
             }
         }
 
-        // 检查是否已经缓存了电文代号
+        // 檢查是否已經緩存了電文代號
         if (CLASS_TRANSACTION_CODE_MAP.containsKey(qualifiedName)) {
             String transactionCode = CLASS_TRANSACTION_CODE_MAP.get(qualifiedName);
 
-            // 根据类名判断是请求还是响应
-            boolean isRequest = isRequestClass(qualifiedName, originalName);
+            // 新增：使用更智能的方式分析類的角色
+            ClassUsageInfo usageInfo = analyzeClassUsage(project, psiClass);
+            boolean isRequest = usageInfo.isRequest;
 
             return TransactionCodeExtractor.generateInterfaceName(originalName, transactionCode, isRequest);
         }
 
         // 從類的方法使用處查找控制器方法
         PsiReference[] references = findReferences(project, psiClass);
+
+        // 新增：分析類的使用情境
+        ClassUsageInfo usageInfo = analyzeClassUsage(project, psiClass);
+
         for (PsiReference reference : references) {
             PsiElement element = reference.getElement();
             PsiMethod method = findEnclosingMethod(element);
             if (method != null) {
-                // 提取电文代号
+                // 提取電文代號
                 String transactionCode = TransactionCodeExtractor.extractTransactionCode(method);
                 if (transactionCode != null && !transactionCode.isEmpty()) {
-                    // 缓存电文代号
+                    // 緩存電文代號
                     CLASS_TRANSACTION_CODE_MAP.put(qualifiedName, transactionCode);
 
-                    // 根据类名判断是请求还是响应
-                    boolean isRequest = isRequestClass(qualifiedName, originalName);
+                    // 使用分析結果決定是請求還是響應
+                    boolean isRequest = usageInfo.isRequest;
 
                     return TransactionCodeExtractor.generateInterfaceName(originalName, transactionCode, isRequest);
                 }
@@ -823,16 +829,16 @@ public class TypescriptContentGenerator {
 
                 if (suffixIndex > 0) {
                     String prefix = tsInterfaceName.substring(0, suffixIndex);
-                    boolean isRequest = originalName.contains("Tranrq") ||
-                            originalName.contains("Request") ||
-                            originalName.contains("Req");
+
+                    // 使用分析結果決定是請求還是響應
+                    boolean isRequest = usageInfo.isRequest;
 
                     return processNestedClassName(prefix, originalName, isRequest);
                 }
             }
         }
 
-        // 未找到电文代号，返回原名称
+        // 未找到電文代號，返回原名稱
         return originalName;
     }
 
@@ -856,19 +862,21 @@ public class TypescriptContentGenerator {
         return references.toArray(new PsiReference[0]);
     }
 
-    // 判断是否为请求类
-    private static boolean isRequestClass(String qualifiedName, String simpleName) {
-        // 检查后缀
-        for (String suffix : CommonUtils.getSettings().getRequestDtoSuffixes()) {
-            if (simpleName.endsWith(suffix)) {
-                return true;
-            }
+    /**
+     * 根據類名和使用情境判斷是否為請求類
+     *
+     * @param project  當前項目
+     * @param psiClass 要判斷的類
+     * @return 是否為請求類
+     */
+    private static boolean isRequestClass(Project project, PsiClass psiClass) {
+        if (psiClass == null) {
+            return false;
         }
 
-        // 检查名称特征
-        return simpleName.contains("Request") ||
-                simpleName.contains("Req") ||
-                simpleName.contains("Tranrq");
+        // 使用新增的分析方法
+        ClassUsageInfo usageInfo = analyzeClassUsage(project, psiClass);
+        return usageInfo.isRequest;
     }
 
     // 获取接口名称（考虑命名规则转换）
@@ -1497,5 +1505,237 @@ public class TypescriptContentGenerator {
         CLASS_NAME_WITH_PACKAGE_2_TYPESCRIPT_COMMENT.clear();
         CLASS_REFERENCES.clear();
         REFERENCED_BY.clear();
+    }
+
+    /**
+     * 分析一個類是請求還是響應，基於它在方法中的使用方式
+     * 
+     * @param project  當前項目
+     * @param psiClass 待分析的類
+     * @return true表示是請求類，false表示是響應類
+     */
+    private static ClassUsageInfo analyzeClassUsage(Project project, PsiClass psiClass) {
+        ClassUsageInfo usageInfo = new ClassUsageInfo();
+        usageInfo.className = psiClass.getQualifiedName();
+
+        // 如果類名明確包含標識，優先使用命名規則判斷（保留舊邏輯作為備用）
+        String simpleName = psiClass.getName();
+        if (simpleName.endsWith("Tranrq") ||
+                simpleName.endsWith("Request") ||
+                simpleName.endsWith("Req")) {
+            usageInfo.nameBasedIsRequest = true;
+            usageInfo.hasClearNamingPattern = true;
+        } else if (simpleName.endsWith("Tranrs") ||
+                simpleName.endsWith("Response") ||
+                simpleName.endsWith("Resp") ||
+                simpleName.endsWith("Rs")) {
+            usageInfo.nameBasedIsRequest = false;
+            usageInfo.hasClearNamingPattern = true;
+        }
+
+        // 查找類的所有引用
+        PsiReference[] references = findReferences(project, psiClass);
+        System.out.println("分析類 " + simpleName + " 的使用情境，找到 " + references.length + " 處引用");
+
+        for (PsiReference reference : references) {
+            PsiElement element = reference.getElement();
+
+            // 檢查是否用作參數
+            boolean isParameter = checkIfUsedAsParameter(element);
+            if (isParameter) {
+                usageInfo.usedAsParameterCount++;
+                System.out.println("  - 作為參數使用於: " + getContainingMethodDescription(element));
+            }
+
+            // 檢查是否用作返回值
+            boolean isReturnValue = checkIfUsedAsReturnValue(element);
+            if (isReturnValue) {
+                usageInfo.usedAsReturnValueCount++;
+                System.out.println("  - 作為返回值使用於: " + getContainingMethodDescription(element));
+            }
+
+            // 檢查是否在控制器方法中
+            PsiMethod method = findEnclosingMethod(element);
+            if (method != null && isControllerMethod(method)) {
+                if (isParameter) {
+                    usageInfo.usedAsControllerParameterCount++;
+                }
+                if (isReturnValue) {
+                    usageInfo.usedAsControllerReturnValueCount++;
+                }
+            }
+        }
+
+        // 進行最終判斷
+        determineClassRole(usageInfo);
+        System.out.println("類 " + simpleName + " 分析結果: " +
+                (usageInfo.isRequest ? "Request" : "Response") +
+                " (參數使用次數: " + usageInfo.usedAsParameterCount +
+                ", 返回值使用次數: " + usageInfo.usedAsReturnValueCount + ")");
+
+        return usageInfo;
+    }
+
+    /**
+     * 基於使用情境信息確定類的角色
+     */
+    private static void determineClassRole(ClassUsageInfo usageInfo) {
+        // 情況1: 有明確的控制器使用情境
+        if (usageInfo.usedAsControllerParameterCount > 0 || usageInfo.usedAsControllerReturnValueCount > 0) {
+            // 控制器參數通常是請求，返回值通常是響應
+            if (usageInfo.usedAsControllerParameterCount > usageInfo.usedAsControllerReturnValueCount) {
+                usageInfo.isRequest = true;
+                usageInfo.confidence = "HIGH";
+                return;
+            } else if (usageInfo.usedAsControllerReturnValueCount > usageInfo.usedAsControllerParameterCount) {
+                usageInfo.isRequest = false;
+                usageInfo.confidence = "HIGH";
+                return;
+            }
+        }
+
+        // 情況2: 有普通方法的使用情境
+        if (usageInfo.usedAsParameterCount > 0 || usageInfo.usedAsReturnValueCount > 0) {
+            // 參數通常是請求，返回值通常是響應
+            if (usageInfo.usedAsParameterCount > usageInfo.usedAsReturnValueCount) {
+                usageInfo.isRequest = true;
+                usageInfo.confidence = "MEDIUM";
+                return;
+            } else if (usageInfo.usedAsReturnValueCount > usageInfo.usedAsParameterCount) {
+                usageInfo.isRequest = false;
+                usageInfo.confidence = "MEDIUM";
+                return;
+            }
+        }
+
+        // 情況3: 沒有明顯使用情境但有命名模式
+        if (usageInfo.hasClearNamingPattern) {
+            usageInfo.isRequest = usageInfo.nameBasedIsRequest;
+            usageInfo.confidence = "MEDIUM";
+            return;
+        }
+
+        // 情況4: 無法判斷，使用默認值
+        // 檢查是否有關聯類
+        if (usageInfo.className != null && usageInfo.className.contains("Tranrq")) {
+            usageInfo.isRequest = true;
+            usageInfo.confidence = "LOW";
+        } else if (usageInfo.className != null && usageInfo.className.contains("Tranrs")) {
+            usageInfo.isRequest = false;
+            usageInfo.confidence = "LOW";
+        } else {
+            // 默認假設為請求類（可根據項目情況調整）
+            usageInfo.isRequest = true;
+            usageInfo.confidence = "VERY_LOW";
+        }
+    }
+
+    /**
+     * 檢查元素是否在方法參數中使用
+     */
+    private static boolean checkIfUsedAsParameter(PsiElement element) {
+        // 向上查找父元素
+        PsiElement parent = element.getParent();
+        while (parent != null) {
+            // 檢查是否是參數列表
+            if (parent instanceof PsiParameterList) {
+                return true;
+            }
+            // 檢查是否是參數
+            if (parent instanceof PsiParameter) {
+                return true;
+            }
+            // 如果已經到達方法體，則不是參數
+            if (parent instanceof PsiMethod || parent instanceof PsiClass) {
+                break;
+            }
+            parent = parent.getParent();
+        }
+        return false;
+    }
+
+    /**
+     * 檢查元素是否用作返回值
+     */
+    private static boolean checkIfUsedAsReturnValue(PsiElement element) {
+        // 向上查找父元素
+        PsiElement parent = element.getParent();
+        while (parent != null) {
+            // 檢查是否是返回語句
+            if (parent instanceof PsiReturnStatement) {
+                return true;
+            }
+            // 檢查是否是方法返回類型
+            if (parent instanceof PsiTypeElement &&
+                    parent.getParent() instanceof PsiMethod) {
+                return true;
+            }
+            // 如果已經到達方法體或類，則停止
+            if (parent instanceof PsiMethod || parent instanceof PsiClass) {
+                break;
+            }
+            parent = parent.getParent();
+        }
+        return false;
+    }
+
+    /**
+     * 檢查方法是否為控制器方法（有@RequestMapping等註解）
+     */
+    private static boolean isControllerMethod(PsiMethod method) {
+        PsiAnnotation[] annotations = method.getAnnotations();
+        for (PsiAnnotation annotation : annotations) {
+            String qualifiedName = annotation.getQualifiedName();
+            if (qualifiedName != null && (qualifiedName.contains("RequestMapping") ||
+                    qualifiedName.contains("GetMapping") ||
+                    qualifiedName.contains("PostMapping") ||
+                    qualifiedName.contains("PutMapping") ||
+                    qualifiedName.contains("DeleteMapping") ||
+                    qualifiedName.contains("PatchMapping"))) {
+                return true;
+            }
+        }
+
+        // 檢查類是否有@Controller或@RestController註解
+        PsiClass containingClass = method.getContainingClass();
+        if (containingClass != null) {
+            for (PsiAnnotation annotation : containingClass.getAnnotations()) {
+                String qualifiedName = annotation.getQualifiedName();
+                if (qualifiedName != null && (qualifiedName.contains("Controller") ||
+                        qualifiedName.contains("RestController"))) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * 獲取包含方法的描述信息
+     */
+    private static String getContainingMethodDescription(PsiElement element) {
+        PsiMethod method = findEnclosingMethod(element);
+        if (method != null) {
+            PsiClass containingClass = method.getContainingClass();
+            String className = containingClass != null ? containingClass.getName() : "unknown";
+            return className + "." + method.getName();
+        }
+        return "unknown method";
+    }
+
+    /**
+     * 類使用情境信息
+     */
+    static class ClassUsageInfo {
+        String className;
+        boolean isRequest = false; // 最終判斷結果
+        boolean nameBasedIsRequest = false; // 基於名稱的判斷
+        boolean hasClearNamingPattern = false; // 是否有明確的命名模式
+        int usedAsParameterCount = 0; // 作為參數使用的次數
+        int usedAsReturnValueCount = 0; // 作為返回值使用的次數
+        int usedAsControllerParameterCount = 0; // 在控制器方法中作為參數使用的次數
+        int usedAsControllerReturnValueCount = 0; // 在控制器方法中作為返回值使用的次數
+        String confidence = "NONE"; // 判斷的置信度: VERY_LOW, LOW, MEDIUM, HIGH
     }
 }
