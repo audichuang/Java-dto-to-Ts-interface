@@ -17,6 +17,8 @@ import org.jetbrains.annotations.NotNull;
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -49,6 +51,11 @@ public class JavaBeanToTypescriptInterfaceSettingsComponent {
     private final JButton addSuffixButton = new JButton("新增");
     private final JButton removeSuffixButton = new JButton("刪除");
 
+    private JCheckBox useTransactionCodePrefixCheckBox;
+    private JTextField requestSuffixField;
+    private JTextField responseSuffixField;
+    private JPanel transactionCodePanel;
+
     public JavaBeanToTypescriptInterfaceSettingsComponent() {
         // 初始化表格屬性
         dtoSuffixTable.getColumnModel().getColumn(0).setPreferredWidth(200);
@@ -62,11 +69,35 @@ public class JavaBeanToTypescriptInterfaceSettingsComponent {
         // DTO 後綴設定區塊
         dtoSuffixesPanel = createDtoSuffixesPanel();
 
+        // 添加使用電文代號作為前綴的選項
+        useTransactionCodePrefixCheckBox = new JCheckBox("使用電文代號作為介面名稱前綴");
+        useTransactionCodePrefixCheckBox.setToolTipText("從控制器方法註解中提取電文代號(如RET-B-QRYSTATEMENTS)作為生成介面的前綴");
+
+        // 添加後綴輸入欄位
+        JPanel suffixPanel = new JPanel(new GridLayout(2, 2, 5, 5));
+        suffixPanel.setBorder(BorderFactory.createEmptyBorder(5, 20, 5, 5));
+
+        JLabel requestSuffixLabel = new JLabel("Request後綴:");
+        requestSuffixField = new JTextField("Req", 10);
+
+        JLabel responseSuffixLabel = new JLabel("Response後綴:");
+        responseSuffixField = new JTextField("Resp", 10);
+
+        suffixPanel.add(requestSuffixLabel);
+        suffixPanel.add(requestSuffixField);
+        suffixPanel.add(responseSuffixLabel);
+        suffixPanel.add(responseSuffixField);
+
+        transactionCodePanel = new JPanel(new BorderLayout());
+        transactionCodePanel.add(useTransactionCodePrefixCheckBox, BorderLayout.NORTH);
+        transactionCodePanel.add(suffixPanel, BorderLayout.CENTER);
+
         // 構建主面板
         mainPanel = new JPanel(new BorderLayout());
         JPanel contentPanel = new JPanel(new VerticalLayout(10));
         contentPanel.add(basicSettingsPanel);
         contentPanel.add(dtoSuffixesPanel);
+        contentPanel.add(transactionCodePanel);
         contentPanel.setBorder(JBUI.Borders.empty(10));
 
         mainPanel.add(contentPanel, BorderLayout.NORTH);
@@ -227,5 +258,34 @@ public class JavaBeanToTypescriptInterfaceSettingsComponent {
                 dtoSuffixTableModel.addRow(new Object[] { suffix });
             }
         }
+    }
+
+    public boolean isUseTransactionCodePrefix() {
+        return useTransactionCodePrefixCheckBox.isSelected();
+    }
+
+    public String getRequestSuffix() {
+        return requestSuffixField.getText();
+    }
+
+    public String getResponseSuffix() {
+        return responseSuffixField.getText();
+    }
+
+    public void setUseTransactionCodePrefix(boolean selected) {
+        useTransactionCodePrefixCheckBox.setSelected(selected);
+        // 觸發顯示/隱藏
+        for (ActionListener listener : useTransactionCodePrefixCheckBox.getActionListeners()) {
+            listener.actionPerformed(new ActionEvent(useTransactionCodePrefixCheckBox,
+                    ActionEvent.ACTION_PERFORMED, ""));
+        }
+    }
+
+    public void setRequestSuffix(String suffix) {
+        requestSuffixField.setText(suffix);
+    }
+
+    public void setResponseSuffix(String suffix) {
+        responseSuffixField.setText(suffix);
     }
 }

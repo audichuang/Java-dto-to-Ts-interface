@@ -109,6 +109,24 @@ public final class JavaBeanToTypescriptInterfaceSettingsState
      */
     public List<String> customDtoSuffixes = new ArrayList<>();
 
+    /**
+     * 是否使用電文代號作為介面名稱前綴
+     */
+    public boolean useTransactionCodePrefix = false;
+
+    /**
+     * Request後綴
+     */
+    public String requestSuffix = "Req";
+
+    /**
+     * Response後綴
+     */
+    public String responseSuffix = "Resp";
+
+    // 新增設定：是否只處理泛型DTO而不處理外層包裝類
+    private boolean onlyProcessGenericDto = true;
+
     // 獲取全局服務實例 (已棄用)
     public static JavaBeanToTypescriptInterfaceSettingsState getInstance() {
         return ApplicationManager.getApplication().getService(JavaBeanToTypescriptInterfaceSettingsState.class);
@@ -299,5 +317,38 @@ public final class JavaBeanToTypescriptInterfaceSettingsState
 
         // 清空舊的配置
         this.customDtoSuffixes.clear();
+    }
+
+    public boolean isUseTransactionCodePrefix() {
+        return useTransactionCodePrefix;
+    }
+
+    public void setUseTransactionCodePrefix(boolean useTransactionCodePrefix) {
+        this.useTransactionCodePrefix = useTransactionCodePrefix;
+    }
+
+    public String getRequestSuffix() {
+        return requestSuffix;
+    }
+
+    public void setRequestSuffix(String requestSuffix) {
+        this.requestSuffix = requestSuffix;
+    }
+
+    public String getResponseSuffix() {
+        return responseSuffix;
+    }
+
+    public void setResponseSuffix(String responseSuffix) {
+        this.responseSuffix = responseSuffix;
+    }
+
+    // 新增只處理泛型DTO的getter和setter
+    public boolean isOnlyProcessGenericDto() {
+        return onlyProcessGenericDto;
+    }
+
+    public void setOnlyProcessGenericDto(boolean onlyProcessGenericDto) {
+        this.onlyProcessGenericDto = onlyProcessGenericDto;
     }
 }

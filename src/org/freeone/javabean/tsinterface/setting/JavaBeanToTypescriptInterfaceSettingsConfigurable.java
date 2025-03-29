@@ -1,6 +1,7 @@
 package org.freeone.javabean.tsinterface.setting;
 
 import com.intellij.openapi.options.Configurable;
+import com.intellij.openapi.options.ConfigurationException;
 import org.jetbrains.annotations.Nls;
 import org.jetbrains.annotations.Nullable;
 
@@ -43,6 +44,7 @@ final class JavaBeanToTypescriptInterfaceSettingsConfigurable implements Configu
         modified |= settings.addOptionalMarkToAllFields != mySettingsComponent.getAddOptionalMarkToAllFields()
                 .isSelected();
         modified |= settings.ignoreSerialVersionUID != mySettingsComponent.getIgnoreSerialVersionUID().isSelected();
+        modified |= settings.isOnlyProcessGenericDto() != mySettingsComponent.isOnlyProcessGenericDto();
 
         // 檢查Request DTO後綴列表是否有修改
         if (mySettingsComponent.getRequestDtoSuffixes().size() != settings.requestDtoSuffixes.size()) {
@@ -66,11 +68,15 @@ final class JavaBeanToTypescriptInterfaceSettingsConfigurable implements Configu
             }
         }
 
-        return modified;
+        // 檢查電文代號相關設定是否修改
+        return modified ||
+                mySettingsComponent.isUseTransactionCodePrefix() != settings.isUseTransactionCodePrefix() ||
+                !mySettingsComponent.getRequestSuffix().equals(settings.getRequestSuffix()) ||
+                !mySettingsComponent.getResponseSuffix().equals(settings.getResponseSuffix());
     }
 
     @Override
-    public void apply() {
+    public void apply() throws ConfigurationException {
         JavaBeanToTypescriptInterfaceSettingsState settings = JavaBeanToTypescriptInterfaceSettingsState.getInstance();
         settings.setEnableDataToString(mySettingsComponent.getDateToStringCheckBox().isSelected());
         settings.setUseAnnotationJsonProperty(mySettingsComponent.getUseJsonPropertyCheckBox().isSelected());
@@ -80,6 +86,7 @@ final class JavaBeanToTypescriptInterfaceSettingsConfigurable implements Configu
         // 保存新增的設定項
         settings.setAddOptionalMarkToAllFields(mySettingsComponent.getAddOptionalMarkToAllFields().isSelected());
         settings.setIgnoreSerialVersionUID(mySettingsComponent.getIgnoreSerialVersionUID().isSelected());
+        settings.setOnlyProcessGenericDto(mySettingsComponent.isOnlyProcessGenericDto());
 
         // 保存Request DTO後綴列表
         settings.requestDtoSuffixes.clear();
@@ -88,6 +95,11 @@ final class JavaBeanToTypescriptInterfaceSettingsConfigurable implements Configu
         // 保存Response DTO後綴列表
         settings.responseDtoSuffixes.clear();
         settings.responseDtoSuffixes.addAll(mySettingsComponent.getResponseDtoSuffixes());
+
+        // 應用電文代號相關設定
+        settings.setUseTransactionCodePrefix(mySettingsComponent.isUseTransactionCodePrefix());
+        settings.setRequestSuffix(mySettingsComponent.getRequestSuffix());
+        settings.setResponseSuffix(mySettingsComponent.getResponseSuffix());
     }
 
     @Override
@@ -101,10 +113,16 @@ final class JavaBeanToTypescriptInterfaceSettingsConfigurable implements Configu
         // 重置新增的設定項
         mySettingsComponent.getAddOptionalMarkToAllFields().setSelected(settings.addOptionalMarkToAllFields);
         mySettingsComponent.getIgnoreSerialVersionUID().setSelected(settings.ignoreSerialVersionUID);
+        mySettingsComponent.setOnlyProcessGenericDto(settings.isOnlyProcessGenericDto());
 
         // 重置Request和Response DTO後綴列表
         mySettingsComponent.setRequestDtoSuffixes(settings.requestDtoSuffixes);
         mySettingsComponent.setResponseDtoSuffixes(settings.responseDtoSuffixes);
+
+        // 重置電文代號相關設定
+        mySettingsComponent.setUseTransactionCodePrefix(settings.isUseTransactionCodePrefix());
+        mySettingsComponent.setRequestSuffix(settings.getRequestSuffix());
+        mySettingsComponent.setResponseSuffix(settings.getResponseSuffix());
     }
 
     @Override

@@ -18,6 +18,7 @@ import com.intellij.psi.impl.source.tree.java.PsiAnnotationImpl;
 import com.intellij.psi.impl.source.tree.java.PsiNameValuePairImpl;
 import com.intellij.psi.search.GlobalSearchScope;
 import org.freeone.javabean.tsinterface.setting.JavaBeanToTypescriptInterfaceProjectSettings;
+import org.freeone.javabean.tsinterface.setting.JavaBeanToTypescriptInterfaceSettingsState;
 
 import java.io.File;
 import java.util.Arrays;
@@ -509,5 +510,48 @@ public class CommonUtils {
      */
     public static JavaBeanToTypescriptInterfaceProjectSettings getProjectSettings(Project project) {
         return JavaBeanToTypescriptInterfaceProjectSettings.getInstance(project);
+    }
+
+    /**
+     * 獲取全局設置
+     * 
+     * @return 全局設置實例
+     */
+    public static JavaBeanToTypescriptInterfaceSettingsState getSettings() {
+        return JavaBeanToTypescriptInterfaceSettingsState.getInstance();
+    }
+
+    /**
+     * 根據類名查找 PsiType
+     * 
+     * @param project   項目
+     * @param className 類名
+     * @return 對應的 PsiType，未找到時返回 null
+     */
+    public static PsiType findPsiType(Project project, String className) {
+        if (className == null || className.isEmpty()) {
+            return null;
+        }
+
+        GlobalSearchScope projectScope = GlobalSearchScope.projectScope(project);
+        PsiClass psiClass = JavaPsiFacade.getInstance(project).findClass(className, projectScope);
+
+        // 優先在項目範圍內查找
+        if (psiClass != null) {
+            return JavaPsiFacade.getElementFactory(project).createType(psiClass);
+        }
+
+        // 檢查是否允許在全局範圍內查找類
+        JavaBeanToTypescriptInterfaceProjectSettings settings = JavaBeanToTypescriptInterfaceProjectSettings
+                .getInstance(project);
+        if (settings.isAllowFindClassInAllScope()) {
+            GlobalSearchScope allScope = GlobalSearchScope.allScope(project);
+            psiClass = JavaPsiFacade.getInstance(project).findClass(className, allScope);
+            if (psiClass != null) {
+                return JavaPsiFacade.getElementFactory(project).createType(psiClass);
+            }
+        }
+
+        return null;
     }
 }

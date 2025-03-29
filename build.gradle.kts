@@ -14,10 +14,8 @@ java {
 
 repositories {
     mavenCentral()
-maven { url = uri("https://repo.jetbrains.team/intellij-repository/releases") }
+    maven { url = uri("https://repo.jetbrains.team/intellij-repository/releases") }
     maven { url = uri("https://packages.jetbrains.team/maven/p/ij/intellij-dependencies") }
-    
-    // maven { url = uri("https://cache-redirector.jetbrains.com/intellij-dependencies") }
 }
 
 // 配置源碼目錄
@@ -35,8 +33,12 @@ sourceSets {
 intellij {
     version.set("2024.1")
     type.set("IC")
-    plugins.set(listOf("com.intellij.java"))
+    plugins.set(listOf(
+        "com.intellij.java", 
+        "org.jetbrains.kotlin"
+    ))
     updateSinceUntilBuild.set(false)
+    downloadSources.set(true)
 }
 
 dependencies {
@@ -49,8 +51,18 @@ tasks {
     // 配置 Java 編譯選項
     withType<JavaCompile> {
         options.encoding = "UTF-8"
-        options.isFailOnError = false
+        options.isFailOnError = true
         options.compilerArgs.add("-Xlint:deprecation")
+    }
+
+    // 清理構建目錄
+    register<Delete>("cleanOutput") {
+        delete("build", "out")
+    }
+
+    // 將cleanOutput任務作為clean任務的依賴
+    clean {
+        dependsOn("cleanOutput")
     }
 
     patchPluginXml {
@@ -62,6 +74,6 @@ tasks {
                 <li>0.2.8: 改進 Alt+Enter 意圖操作，提供保存、複製和編輯選項</li>
             </ul>
         """)
-        pluginId.set("org.freeone.javadto.tsinterface")
+        pluginId.set("org.freeone.javabean.tsinterface")
     }
 } 
