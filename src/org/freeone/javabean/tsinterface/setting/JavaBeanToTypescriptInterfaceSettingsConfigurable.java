@@ -44,13 +44,24 @@ final class JavaBeanToTypescriptInterfaceSettingsConfigurable implements Configu
                 .isSelected();
         modified |= settings.ignoreSerialVersionUID != mySettingsComponent.getIgnoreSerialVersionUID().isSelected();
 
-        // 檢查DTO後綴列表是否有修改
-        if (mySettingsComponent.getCustomDtoSuffixes().size() != settings.customDtoSuffixes.size()) {
+        // 檢查Request DTO後綴列表是否有修改
+        if (mySettingsComponent.getRequestDtoSuffixes().size() != settings.requestDtoSuffixes.size()) {
             return true;
         }
 
-        for (String suffix : mySettingsComponent.getCustomDtoSuffixes()) {
-            if (!settings.customDtoSuffixes.contains(suffix)) {
+        for (String suffix : mySettingsComponent.getRequestDtoSuffixes()) {
+            if (!settings.requestDtoSuffixes.contains(suffix)) {
+                return true;
+            }
+        }
+
+        // 檢查Response DTO後綴列表是否有修改
+        if (mySettingsComponent.getResponseDtoSuffixes().size() != settings.responseDtoSuffixes.size()) {
+            return true;
+        }
+
+        for (String suffix : mySettingsComponent.getResponseDtoSuffixes()) {
+            if (!settings.responseDtoSuffixes.contains(suffix)) {
                 return true;
             }
         }
@@ -70,9 +81,13 @@ final class JavaBeanToTypescriptInterfaceSettingsConfigurable implements Configu
         settings.setAddOptionalMarkToAllFields(mySettingsComponent.getAddOptionalMarkToAllFields().isSelected());
         settings.setIgnoreSerialVersionUID(mySettingsComponent.getIgnoreSerialVersionUID().isSelected());
 
-        // 保存DTO後綴列表
-        settings.customDtoSuffixes.clear();
-        settings.customDtoSuffixes.addAll(mySettingsComponent.getCustomDtoSuffixes());
+        // 保存Request DTO後綴列表
+        settings.requestDtoSuffixes.clear();
+        settings.requestDtoSuffixes.addAll(mySettingsComponent.getRequestDtoSuffixes());
+
+        // 保存Response DTO後綴列表
+        settings.responseDtoSuffixes.clear();
+        settings.responseDtoSuffixes.addAll(mySettingsComponent.getResponseDtoSuffixes());
     }
 
     @Override
@@ -87,8 +102,9 @@ final class JavaBeanToTypescriptInterfaceSettingsConfigurable implements Configu
         mySettingsComponent.getAddOptionalMarkToAllFields().setSelected(settings.addOptionalMarkToAllFields);
         mySettingsComponent.getIgnoreSerialVersionUID().setSelected(settings.ignoreSerialVersionUID);
 
-        // 重置DTO後綴列表
-        mySettingsComponent.setCustomDtoSuffixes(settings.customDtoSuffixes);
+        // 重置Request和Response DTO後綴列表
+        mySettingsComponent.setRequestDtoSuffixes(settings.requestDtoSuffixes);
+        mySettingsComponent.setResponseDtoSuffixes(settings.responseDtoSuffixes);
     }
 
     @Override

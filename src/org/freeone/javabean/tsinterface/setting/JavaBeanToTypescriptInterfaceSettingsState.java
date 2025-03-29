@@ -2,8 +2,10 @@ package org.freeone.javabean.tsinterface.setting;
 
 import com.intellij.openapi.application.ApplicationManager;
 import com.intellij.openapi.components.PersistentStateComponent;
+import com.intellij.openapi.components.Service;
 import com.intellij.openapi.components.State;
 import com.intellij.openapi.components.Storage;
+import com.intellij.openapi.project.Project;
 import com.intellij.util.xmlb.XmlSerializerUtil;
 import org.jetbrains.annotations.NotNull;
 
@@ -19,14 +21,15 @@ import java.util.List;
  * - 是否將java.util.Date轉換為字符串
  * - 是否使用@JsonProperty註解
  * - 是否忽略serialVersionUID
- * - 自定義DTO後綴列表
+ * - 自定義Request和Response DTO後綴列表
  * </p>
  */
-@State(name = "JavaBeanToTypescriptInterfaceSetting", storages = @Storage("JavaBeanToTypescriptInterfaceSettingsPlugin.xml"))
+@State(name = "JavaBeanToTypescriptInterfaceSettings", storages = {
+        @Storage("JavaBeanToTypescriptInterfaceSettings.xml")
+})
+@Service(Service.Level.APP)
 public final class JavaBeanToTypescriptInterfaceSettingsState
         implements PersistentStateComponent<JavaBeanToTypescriptInterfaceSettingsState> {
-
-    public String userName = "TheFreeOne";
 
     /**
      * 控制是否將java.util.Date轉換為TypeScript的string類型
@@ -71,31 +74,54 @@ public final class JavaBeanToTypescriptInterfaceSettingsState
     public boolean ignoreSerialVersionUID = true;
 
     /**
-     * 自定義DTO類後綴列表
-     * 用戶可以添加自己的DTO類後綴，插件會自動識別符合這些後綴的類作為DTO
-     * 默認包含常見的DTO類後綴：
+     * 請求類後綴列表
+     * 用戶可以添加自己的Request DTO類後綴，插件會自動識別符合這些後綴的類作為請求數據對象
+     * 默認包含常見的Request DTO類後綴：
      * - DTO/Dto: 標準的數據傳輸對象
-     * - Request/Response: 用於HTTP請求和響應
-     * - Rq/Rs/Req/Resp: Request/Response的縮寫
-     * - Tranrq/Tranrs: 交易請求和響應
-     * - Detail/Entity/Qry/Query: 常見的業務對象
-     * - Model/Info/Data/Bean: 通用數據容器
-     * - VO/Vo: 顯示層對象
+     * - Request/Req/Rq: 請求對象
+     * - Tranrq: 交易請求
+     * - Model/Entity/Query: 常見的業務請求對象
      */
-    public List<String> customDtoSuffixes = new ArrayList<>(Arrays.asList(
+    public List<String> requestDtoSuffixes = new ArrayList<>(Arrays.asList(
             "DTO", "Dto",
-            "Request", "Response",
-            "Rq", "Rs",
-            "Tranrq", "Tranrs",
-            "Req", "Resp",
-            "Detail", "Entity",
+            "Request", "Req", "Rq", "Tranrq",
             "Qry", "Query",
-            "Model", "Info",
+            "Model", "Entity",
             "Data", "Bean",
             "VO", "Vo"));
 
+    /**
+     * 響應類後綴列表
+     * 用戶可以添加自己的Response DTO類後綴，插件會自動識別符合這些後綴的類作為響應數據對象
+     * 默認包含常見的Response DTO類後綴：
+     * - Response/Resp/Rs: 響應對象
+     * - Tranrs: 交易響應
+     * - Result: 結果對象
+     * - Detail: 詳細信息對象
+     */
+    public List<String> responseDtoSuffixes = new ArrayList<>(Arrays.asList(
+            "Response", "Resp", "Rs", "Tranrs",
+            "Result", "Results",
+            "Detail", "Info"));
+
+    /**
+     * 向後兼容：自定義DTO類後綴列表（包含所有類型）
+     */
+    public List<String> customDtoSuffixes = new ArrayList<>();
+
+    // 獲取全局服務實例 (已棄用)
     public static JavaBeanToTypescriptInterfaceSettingsState getInstance() {
         return ApplicationManager.getApplication().getService(JavaBeanToTypescriptInterfaceSettingsState.class);
+    }
+
+    /**
+     * 獲取項目級別的設定實例
+     * 
+     * @param project 當前項目
+     * @return 項目級別的設定狀態
+     */
+    public static JavaBeanToTypescriptInterfaceSettingsState getInstance(Project project) {
+        return project.getService(JavaBeanToTypescriptInterfaceSettingsState.class);
     }
 
     @NotNull
@@ -107,6 +133,39 @@ public final class JavaBeanToTypescriptInterfaceSettingsState
     @Override
     public void loadState(@NotNull JavaBeanToTypescriptInterfaceSettingsState state) {
         XmlSerializerUtil.copyBean(state, this);
+
+        // 如果還有舊版本的自定義後綴配置，分類到新的后缀列表中
+        if (!customDtoSuffixes.isEmpty()) {
+            for (String suffix : customDtoSuffixes) {
+                if (isRequestSuffix(suffix) && !requestDtoSuffixes.contains(suffix)) {
+                    requestDtoSuffixes.add(suffix);
+                } else if (isResponseSuffix(suffix) && !responseDtoSuffixes.contains(suffix)) {
+                    responseDtoSuffixes.add(suffix);
+                }
+            }
+            // 清空舊的配置
+            customDtoSuffixes.clear();
+        }
+    }
+
+    /**
+     * 判斷後綴是否屬於請求類型
+     */
+    private boolean isRequestSuffix(String suffix) {
+        return suffix.contains("Request") || suffix.contains("Req") ||
+                suffix.equals("Rq") || suffix.contains("Tranrq") ||
+                suffix.contains("Qry") || suffix.contains("Query") ||
+                !isResponseSuffix(suffix); // 預設非響應類型的後綴為請求類型
+    }
+
+    /**
+     * 判斷後綴是否屬於響應類型
+     */
+    private boolean isResponseSuffix(String suffix) {
+        return suffix.contains("Response") || suffix.contains("Resp") ||
+                suffix.equals("Rs") || suffix.contains("Tranrs") ||
+                suffix.contains("Result") || suffix.contains("Results") ||
+                suffix.contains("Detail") || suffix.equals("Info");
     }
 
     public boolean getUseAnnotationJsonProperty() {
@@ -157,32 +216,59 @@ public final class JavaBeanToTypescriptInterfaceSettingsState
         this.ignoreSerialVersionUID = ignoreSerialVersionUID;
     }
 
+    public List<String> getRequestDtoSuffixes() {
+        return requestDtoSuffixes;
+    }
+
+    public void setRequestDtoSuffixes(List<String> requestDtoSuffixes) {
+        this.requestDtoSuffixes = requestDtoSuffixes;
+    }
+
+    public List<String> getResponseDtoSuffixes() {
+        return responseDtoSuffixes;
+    }
+
+    public void setResponseDtoSuffixes(List<String> responseDtoSuffixes) {
+        this.responseDtoSuffixes = responseDtoSuffixes;
+    }
+
+    /**
+     * 向後兼容：獲取所有DTO後綴
+     */
     public List<String> getCustomDtoSuffixes() {
-        return customDtoSuffixes;
-    }
-
-    public void setCustomDtoSuffixes(List<String> customDtoSuffixes) {
-        this.customDtoSuffixes = customDtoSuffixes;
+        List<String> allSuffixes = new ArrayList<>();
+        allSuffixes.addAll(requestDtoSuffixes);
+        allSuffixes.addAll(responseDtoSuffixes);
+        return allSuffixes;
     }
 
     /**
-     * 添加DTO後綴到列表中
-     * 
-     * @param suffix 後綴
+     * 向後兼容：設置所有DTO後綴並進行分類
      */
-    public void addDtoSuffix(String suffix) {
-        if (suffix != null && !suffix.isEmpty() && !customDtoSuffixes.contains(suffix)) {
-            customDtoSuffixes.add(suffix);
+    public void setCustomDtoSuffixes(List<String> suffixes) {
+        if (suffixes == null || suffixes.isEmpty()) {
+            return;
         }
-    }
 
-    /**
-     * 從列表中移除DTO後綴
-     * 
-     * @param suffix 後綴
-     */
-    public void removeDtoSuffix(String suffix) {
-        customDtoSuffixes.remove(suffix);
+        // 清空現有列表
+        requestDtoSuffixes.clear();
+        responseDtoSuffixes.clear();
+
+        // 分類添加
+        for (String suffix : suffixes) {
+            if (suffix == null || suffix.isEmpty()) {
+                continue;
+            }
+
+            if (isRequestSuffix(suffix)) {
+                requestDtoSuffixes.add(suffix);
+            } else if (isResponseSuffix(suffix)) {
+                responseDtoSuffixes.add(suffix);
+            } else {
+                // 默認添加到請求類型
+                requestDtoSuffixes.add(suffix);
+            }
+        }
     }
 
     /**
@@ -195,16 +281,23 @@ public final class JavaBeanToTypescriptInterfaceSettingsState
         this.ignoreParentField = false;
         this.addOptionalMarkToAllFields = false;
         this.ignoreSerialVersionUID = true;
-        this.customDtoSuffixes = new ArrayList<>(Arrays.asList(
+
+        // 重置請求類後綴
+        this.requestDtoSuffixes = new ArrayList<>(Arrays.asList(
                 "DTO", "Dto",
-                "Request", "Response",
-                "Rq", "Rs",
-                "Tranrq", "Tranrs",
-                "Req", "Resp",
-                "Detail", "Entity",
+                "Request", "Req", "Rq", "Tranrq",
                 "Qry", "Query",
-                "Model", "Info",
+                "Model", "Entity",
                 "Data", "Bean",
                 "VO", "Vo"));
+
+        // 重置響應類後綴
+        this.responseDtoSuffixes = new ArrayList<>(Arrays.asList(
+                "Response", "Resp", "Rs", "Tranrs",
+                "Result", "Results",
+                "Detail", "Info"));
+
+        // 清空舊的配置
+        this.customDtoSuffixes.clear();
     }
 }

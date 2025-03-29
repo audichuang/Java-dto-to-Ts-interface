@@ -19,12 +19,19 @@ public class JavaBeanToTypescriptInterfaceComponent {
     private JCheckBox addOptionalMarkToAllFields;
     private JCheckBox ignoreSerialVersionUID;
 
-    // DTO後綴設定
-    private JTable dtoSuffixTable;
-    private DefaultTableModel dtoSuffixTableModel;
-    private JTextField newSuffixField;
-    private JButton addSuffixButton;
-    private JButton removeSuffixButton;
+    // Request DTO後綴設定
+    private JTable requestDtoSuffixTable;
+    private DefaultTableModel requestDtoSuffixTableModel;
+    private JTextField newRequestSuffixField;
+    private JButton addRequestSuffixButton;
+    private JButton removeRequestSuffixButton;
+
+    // Response DTO後綴設定
+    private JTable responseDtoSuffixTable;
+    private DefaultTableModel responseDtoSuffixTableModel;
+    private JTextField newResponseSuffixField;
+    private JButton addResponseSuffixButton;
+    private JButton removeResponseSuffixButton;
 
     public JavaBeanToTypescriptInterfaceComponent() {
         createUI();
@@ -45,7 +52,11 @@ public class JavaBeanToTypescriptInterfaceComponent {
         mainPanel.add(basicSettingsPanel, BorderLayout.NORTH);
         mainPanel.add(dtoSuffixesPanel, BorderLayout.CENTER);
 
-        jPanel.add(mainPanel, BorderLayout.NORTH);
+        JScrollPane scrollPane = new JScrollPane(mainPanel);
+        scrollPane.setBorder(null);
+        scrollPane.setPreferredSize(new Dimension(600, 500));
+
+        jPanel.add(scrollPane, BorderLayout.CENTER);
     }
 
     private JPanel createBasicSettingsPanel() {
@@ -84,14 +95,27 @@ public class JavaBeanToTypescriptInterfaceComponent {
     }
 
     private JPanel createDtoSuffixesPanel() {
-        JPanel panel = new JPanel(new BorderLayout(0, 10));
+        JPanel panel = new JPanel(new GridLayout(2, 1, 0, 10));
         panel.setBorder(BorderFactory.createTitledBorder(
                 BorderFactory.createEtchedBorder(), "DTO 類後綴設定", TitledBorder.LEFT, TitledBorder.TOP));
 
+        // 添加 Request DTO 後綴設定面板
+        panel.add(createRequestDtoSuffixesPanel());
+
+        // 添加 Response DTO 後綴設定面板
+        panel.add(createResponseDtoSuffixesPanel());
+
+        return panel;
+    }
+
+    private JPanel createRequestDtoSuffixesPanel() {
+        JPanel panel = new JPanel(new BorderLayout(0, 10));
+        panel.setBorder(BorderFactory.createTitledBorder(
+                BorderFactory.createEtchedBorder(), "Request DTO 後綴", TitledBorder.LEFT, TitledBorder.TOP));
+
         // 說明文字
         JTextArea description = new JTextArea(
-                "設定用於識別DTO類的後綴名稱。插件會自動識別符合這些後綴的類作為DTO進行轉換。\n" +
-                        "如需添加自定義後綴，請在下方輸入框中輸入後點擊「添加」按鈕。");
+                "設定用於識別請求類(Request DTO)的後綴名稱。插件會自動識別符合這些後綴的類作為請求數據對象進行轉換。");
         description.setEditable(false);
         description.setWrapStyleWord(true);
         description.setLineWrap(true);
@@ -100,41 +124,103 @@ public class JavaBeanToTypescriptInterfaceComponent {
         description.setBorder(BorderFactory.createEmptyBorder(0, 5, 10, 5));
 
         // 初始化表格
-        dtoSuffixTableModel = new DefaultTableModel(new String[] { "DTO 後綴" }, 0);
-        dtoSuffixTable = new JTable(dtoSuffixTableModel);
-        dtoSuffixTable.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+        requestDtoSuffixTableModel = new DefaultTableModel(new String[] { "Request 後綴" }, 0);
+        requestDtoSuffixTable = new JTable(requestDtoSuffixTableModel);
+        requestDtoSuffixTable.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
 
-        JScrollPane tableScrollPane = new JScrollPane(dtoSuffixTable);
-        tableScrollPane.setPreferredSize(new Dimension(300, 150));
+        JScrollPane tableScrollPane = new JScrollPane(requestDtoSuffixTable);
+        tableScrollPane.setPreferredSize(new Dimension(300, 100));
 
         // 新增後綴面板
         JPanel addSuffixPanel = new JPanel(new BorderLayout(5, 0));
-        newSuffixField = new JTextField(15);
-        addSuffixButton = new JButton("添加");
-        removeSuffixButton = new JButton("刪除");
+        newRequestSuffixField = new JTextField(15);
+        addRequestSuffixButton = new JButton("添加");
+        removeRequestSuffixButton = new JButton("刪除");
 
         JPanel buttonsPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
-        buttonsPanel.add(addSuffixButton);
-        buttonsPanel.add(removeSuffixButton);
+        buttonsPanel.add(addRequestSuffixButton);
+        buttonsPanel.add(removeRequestSuffixButton);
 
         addSuffixPanel.add(new JLabel("新增後綴: "), BorderLayout.WEST);
-        addSuffixPanel.add(newSuffixField, BorderLayout.CENTER);
+        addSuffixPanel.add(newRequestSuffixField, BorderLayout.CENTER);
         addSuffixPanel.add(buttonsPanel, BorderLayout.EAST);
         addSuffixPanel.setBorder(BorderFactory.createEmptyBorder(5, 5, 5, 5));
 
         // 添加事件監聽器
-        addSuffixButton.addActionListener(e -> {
-            String suffix = newSuffixField.getText().trim();
-            if (!suffix.isEmpty() && !containsSuffix(suffix)) {
-                dtoSuffixTableModel.addRow(new Object[] { suffix });
-                newSuffixField.setText("");
+        addRequestSuffixButton.addActionListener(e -> {
+            String suffix = newRequestSuffixField.getText().trim();
+            if (!suffix.isEmpty() && !containsSuffix(requestDtoSuffixTableModel, suffix)) {
+                requestDtoSuffixTableModel.addRow(new Object[] { suffix });
+                newRequestSuffixField.setText("");
             }
         });
 
-        removeSuffixButton.addActionListener(e -> {
-            int selectedRow = dtoSuffixTable.getSelectedRow();
+        removeRequestSuffixButton.addActionListener(e -> {
+            int selectedRow = requestDtoSuffixTable.getSelectedRow();
             if (selectedRow != -1) {
-                dtoSuffixTableModel.removeRow(selectedRow);
+                requestDtoSuffixTableModel.removeRow(selectedRow);
+            }
+        });
+
+        // 組合面板
+        panel.add(description, BorderLayout.NORTH);
+        panel.add(tableScrollPane, BorderLayout.CENTER);
+        panel.add(addSuffixPanel, BorderLayout.SOUTH);
+
+        return panel;
+    }
+
+    private JPanel createResponseDtoSuffixesPanel() {
+        JPanel panel = new JPanel(new BorderLayout(0, 10));
+        panel.setBorder(BorderFactory.createTitledBorder(
+                BorderFactory.createEtchedBorder(), "Response DTO 後綴", TitledBorder.LEFT, TitledBorder.TOP));
+
+        // 說明文字
+        JTextArea description = new JTextArea(
+                "設定用於識別響應類(Response DTO)的後綴名稱。插件會自動識別符合這些後綴的類作為響應數據對象進行轉換。");
+        description.setEditable(false);
+        description.setWrapStyleWord(true);
+        description.setLineWrap(true);
+        description.setOpaque(false);
+        description.setBackground(new Color(0, 0, 0, 0));
+        description.setBorder(BorderFactory.createEmptyBorder(0, 5, 10, 5));
+
+        // 初始化表格
+        responseDtoSuffixTableModel = new DefaultTableModel(new String[] { "Response 後綴" }, 0);
+        responseDtoSuffixTable = new JTable(responseDtoSuffixTableModel);
+        responseDtoSuffixTable.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+
+        JScrollPane tableScrollPane = new JScrollPane(responseDtoSuffixTable);
+        tableScrollPane.setPreferredSize(new Dimension(300, 100));
+
+        // 新增後綴面板
+        JPanel addSuffixPanel = new JPanel(new BorderLayout(5, 0));
+        newResponseSuffixField = new JTextField(15);
+        addResponseSuffixButton = new JButton("添加");
+        removeResponseSuffixButton = new JButton("刪除");
+
+        JPanel buttonsPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
+        buttonsPanel.add(addResponseSuffixButton);
+        buttonsPanel.add(removeResponseSuffixButton);
+
+        addSuffixPanel.add(new JLabel("新增後綴: "), BorderLayout.WEST);
+        addSuffixPanel.add(newResponseSuffixField, BorderLayout.CENTER);
+        addSuffixPanel.add(buttonsPanel, BorderLayout.EAST);
+        addSuffixPanel.setBorder(BorderFactory.createEmptyBorder(5, 5, 5, 5));
+
+        // 添加事件監聽器
+        addResponseSuffixButton.addActionListener(e -> {
+            String suffix = newResponseSuffixField.getText().trim();
+            if (!suffix.isEmpty() && !containsSuffix(responseDtoSuffixTableModel, suffix)) {
+                responseDtoSuffixTableModel.addRow(new Object[] { suffix });
+                newResponseSuffixField.setText("");
+            }
+        });
+
+        removeResponseSuffixButton.addActionListener(e -> {
+            int selectedRow = responseDtoSuffixTable.getSelectedRow();
+            if (selectedRow != -1) {
+                responseDtoSuffixTableModel.removeRow(selectedRow);
             }
         });
 
@@ -147,9 +233,9 @@ public class JavaBeanToTypescriptInterfaceComponent {
     }
 
     // 檢查後綴是否已存在
-    private boolean containsSuffix(String suffix) {
-        for (int i = 0; i < dtoSuffixTableModel.getRowCount(); i++) {
-            if (Objects.equals(dtoSuffixTableModel.getValueAt(i, 0), suffix)) {
+    private boolean containsSuffix(DefaultTableModel model, String suffix) {
+        for (int i = 0; i < model.getRowCount(); i++) {
+            if (Objects.equals(model.getValueAt(i, 0), suffix)) {
                 return true;
             }
         }
@@ -184,10 +270,10 @@ public class JavaBeanToTypescriptInterfaceComponent {
         return ignoreSerialVersionUID;
     }
 
-    public List<String> getCustomDtoSuffixes() {
+    public List<String> getRequestDtoSuffixes() {
         List<String> suffixes = new ArrayList<>();
-        for (int i = 0; i < dtoSuffixTableModel.getRowCount(); i++) {
-            String suffix = (String) dtoSuffixTableModel.getValueAt(i, 0);
+        for (int i = 0; i < requestDtoSuffixTableModel.getRowCount(); i++) {
+            String suffix = (String) requestDtoSuffixTableModel.getValueAt(i, 0);
             if (suffix != null && !suffix.isEmpty()) {
                 suffixes.add(suffix);
             }
@@ -195,17 +281,78 @@ public class JavaBeanToTypescriptInterfaceComponent {
         return suffixes;
     }
 
-    public void setCustomDtoSuffixes(List<String> suffixes) {
+    public List<String> getResponseDtoSuffixes() {
+        List<String> suffixes = new ArrayList<>();
+        for (int i = 0; i < responseDtoSuffixTableModel.getRowCount(); i++) {
+            String suffix = (String) responseDtoSuffixTableModel.getValueAt(i, 0);
+            if (suffix != null && !suffix.isEmpty()) {
+                suffixes.add(suffix);
+            }
+        }
+        return suffixes;
+    }
+
+    // 為了兼容現有代碼，保留這個方法
+    public List<String> getCustomDtoSuffixes() {
+        List<String> allSuffixes = new ArrayList<>();
+        allSuffixes.addAll(getRequestDtoSuffixes());
+        allSuffixes.addAll(getResponseDtoSuffixes());
+        return allSuffixes;
+    }
+
+    public void setRequestDtoSuffixes(List<String> suffixes) {
         // 清空表格
-        while (dtoSuffixTableModel.getRowCount() > 0) {
-            dtoSuffixTableModel.removeRow(0);
+        while (requestDtoSuffixTableModel.getRowCount() > 0) {
+            requestDtoSuffixTableModel.removeRow(0);
         }
 
         // 添加新數據
         for (String suffix : suffixes) {
             if (suffix != null && !suffix.isEmpty()) {
-                dtoSuffixTableModel.addRow(new Object[] { suffix });
+                requestDtoSuffixTableModel.addRow(new Object[] { suffix });
             }
         }
+    }
+
+    public void setResponseDtoSuffixes(List<String> suffixes) {
+        // 清空表格
+        while (responseDtoSuffixTableModel.getRowCount() > 0) {
+            responseDtoSuffixTableModel.removeRow(0);
+        }
+
+        // 添加新數據
+        for (String suffix : suffixes) {
+            if (suffix != null && !suffix.isEmpty()) {
+                responseDtoSuffixTableModel.addRow(new Object[] { suffix });
+            }
+        }
+    }
+
+    // 為了兼容現有代碼，保留這個方法，但實際上會根據後綴進行分類
+    public void setCustomDtoSuffixes(List<String> suffixes) {
+        List<String> requestSuffixes = new ArrayList<>();
+        List<String> responseSuffixes = new ArrayList<>();
+
+        // 依據命名規則將後綴分類
+        for (String suffix : suffixes) {
+            if (suffix == null || suffix.isEmpty()) {
+                continue;
+            }
+
+            if (suffix.contains("Request") || suffix.contains("Req") ||
+                    suffix.equals("Rq") || suffix.contains("Tranrq")) {
+                requestSuffixes.add(suffix);
+            } else if (suffix.contains("Response") || suffix.contains("Resp") ||
+                    suffix.equals("Rs") || suffix.contains("Tranrs") ||
+                    suffix.contains("Result")) {
+                responseSuffixes.add(suffix);
+            } else {
+                // 其他後綴默認放到 request 類別
+                requestSuffixes.add(suffix);
+            }
+        }
+
+        setRequestDtoSuffixes(requestSuffixes);
+        setResponseDtoSuffixes(responseSuffixes);
     }
 }

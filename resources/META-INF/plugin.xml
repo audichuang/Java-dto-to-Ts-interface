@@ -1,6 +1,6 @@
 <!-- Plugin Configuration File. Read more: https://plugins.jetbrains.com/docs/intellij/plugin-configuration-file.html -->
 <idea-plugin>
-  <id>org.freeone.javadto.tsinterface</id>
+  <id>org.freeone.javabean.tsinterface</id>
   <name>Java DTO to TS Interface</name>
   <version>0.2.9</version>
   <vendor email="audichuang@gmail.com" url="https://github.com/AudiChuang/Java-dto-to-Ts-interface">AudiChuang</vendor>
@@ -90,6 +90,9 @@
 
     <applicationService
             serviceImplementation="org.freeone.javabean.tsinterface.setting.JavaBeanToTypescriptInterfaceSettingsState"/>
+
+    <projectService
+            serviceImplementation="org.freeone.javabean.tsinterface.setting.JavaBeanToTypescriptInterfaceProjectSettings"/>
 
     <!--            parentId="tools"-->
     <applicationConfigurable

@@ -22,6 +22,7 @@ import org.freeone.javabean.tsinterface.swing.TypescriptInterfaceShowerWrapper;
 import org.freeone.javabean.tsinterface.util.CommonUtils;
 import org.freeone.javabean.tsinterface.util.TypescriptContentGenerator;
 import org.freeone.javabean.tsinterface.service.DtoTypescriptGeneratorService;
+import org.freeone.javabean.tsinterface.setting.JavaBeanToTypescriptInterfaceProjectSettings;
 
 import javax.swing.*;
 import javax.swing.SwingUtilities;
@@ -342,5 +343,104 @@ public class JavaBeanToTypescriptInterfaceAction extends AnAction {
                 notification.notify(project);
             }, ModalityState.defaultModalityState());
         }
+    }
+
+    /**
+     * 判斷是否為DTO類
+     */
+    private boolean isDtoClass(PsiClass psiClass) {
+        // 通常 DTO 類是普通 Java 類，不是接口、枚舉或者註解
+        if (psiClass.isInterface() || psiClass.isEnum() || psiClass.isAnnotationType()) {
+            return false;
+        }
+
+        // 通常 DTO 類名稱包含一些特定的模式
+        String className = psiClass.getName();
+        if (className == null) {
+            return false;
+        }
+
+        // 獲取當前項目
+        Project project = psiClass.getProject();
+
+        // 獲取項目級別的設定
+        JavaBeanToTypescriptInterfaceProjectSettings settings = JavaBeanToTypescriptInterfaceProjectSettings
+                .getInstance(project);
+
+        // 檢查QryStatement特殊類型和常見包含關鍵詞的類
+        if (className.toLowerCase().contains("qrystatement") ||
+                className.toLowerCase().contains("qry") ||
+                className.toLowerCase().contains("query") ||
+                className.toLowerCase().contains("dto") ||
+                className.toLowerCase().contains("model") ||
+                className.toLowerCase().contains("bean") ||
+                className.toLowerCase().contains("vo") ||
+                className.toLowerCase().contains("entity") ||
+                className.toLowerCase().contains("request") ||
+                className.toLowerCase().contains("response") ||
+                className.toLowerCase().contains("result")) {
+            System.out.println("找到DTO類: " + className);
+            return true;
+        }
+
+        // 檢查請求DTO後綴
+        List<String> requestSuffixes = settings.getEffectiveRequestDtoSuffixes();
+        for (String suffix : requestSuffixes) {
+            if (className.endsWith(suffix)) {
+                System.out.println("找到請求DTO類: " + className + ", 後綴: " + suffix);
+                return true;
+            }
+        }
+
+        // 檢查響應DTO後綴
+        List<String> responseSuffixes = settings.getEffectiveResponseDtoSuffixes();
+        for (String suffix : responseSuffixes) {
+            if (className.endsWith(suffix)) {
+                System.out.println("找到響應DTO類: " + className + ", 後綴: " + suffix);
+                return true;
+            }
+        }
+
+        // 如果後綴檢查沒通過，則檢查類結構
+        boolean isDto = checkClassStructure(psiClass);
+        if (isDto) {
+            System.out.println("根據類結構識別出DTO類: " + className);
+        }
+        return isDto;
+    }
+
+    /**
+     * 根據類結構判斷是否為DTO類
+     */
+    private boolean checkClassStructure(PsiClass psiClass) {
+        // 檢查類中是否存在公開的字段或者 getter/setter 方法
+        // 通常 DTO 類會包含多個公開字段或 getter/setter 方法
+        PsiField[] fields = psiClass.getFields();
+        if (fields.length > 0) {
+            int publicFieldCount = 0;
+            for (PsiField field : fields) {
+                if (field.hasModifierProperty(PsiModifier.PUBLIC)) {
+                    publicFieldCount++;
+                }
+            }
+            // 如果有多個公開字段，可能是數據傳輸對象
+            if (publicFieldCount > 2) {
+                return true;
+            }
+        }
+
+        // 檢查 getter/setter 方法
+        PsiMethod[] methods = psiClass.getMethods();
+        int getterSetterCount = 0;
+        for (PsiMethod method : methods) {
+            String methodName = method.getName();
+            if ((methodName.startsWith("get") || methodName.startsWith("set")) &&
+                    methodName.length() > 3 &&
+                    Character.isUpperCase(methodName.charAt(3))) {
+                getterSetterCount++;
+            }
+        }
+        // 如果有多個 getter/setter 方法，可能是 DTO
+        return getterSetterCount > 3;
     }
 }

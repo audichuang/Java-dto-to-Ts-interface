@@ -17,7 +17,7 @@ import com.intellij.psi.impl.source.PsiClassReferenceType;
 import com.intellij.psi.impl.source.tree.java.PsiAnnotationImpl;
 import com.intellij.psi.impl.source.tree.java.PsiNameValuePairImpl;
 import com.intellij.psi.search.GlobalSearchScope;
-import org.freeone.javabean.tsinterface.setting.JavaBeanToTypescriptInterfaceSettingsState;
+import org.freeone.javabean.tsinterface.setting.JavaBeanToTypescriptInterfaceProjectSettings;
 
 import java.io.File;
 import java.util.Arrays;
@@ -47,7 +47,11 @@ public class CommonUtils {
     public static PsiClass findPsiClass(Project project, PsiType vType) {
         GlobalSearchScope projectScope = GlobalSearchScope.projectScope(project);
         PsiClass psiClass = JavaPsiFacade.getInstance(project).findClass(vType.getCanonicalText(), projectScope);
-        if (psiClass == null && JavaBeanToTypescriptInterfaceSettingsState.getInstance().allowFindClassInAllScope) {
+        // 獲取項目級設定
+        JavaBeanToTypescriptInterfaceProjectSettings settings = JavaBeanToTypescriptInterfaceProjectSettings
+                .getInstance(project);
+        // 檢查是否允許在全局範圍內查找類
+        if (psiClass == null && settings.isAllowFindClassInAllScope()) {
             GlobalSearchScope allScope = GlobalSearchScope.allScope(project);
             psiClass = JavaPsiFacade.getInstance(project).findClass(vType.getCanonicalText(), allScope);
         }
@@ -495,5 +499,15 @@ public class CommonUtils {
 
         // 获取带有泛型的类名
         return classType.getCanonicalText();
+    }
+
+    /**
+     * 獲取項目設置
+     *
+     * @param project 項目
+     * @return 項目設置
+     */
+    public static JavaBeanToTypescriptInterfaceProjectSettings getProjectSettings(Project project) {
+        return JavaBeanToTypescriptInterfaceProjectSettings.getInstance(project);
     }
 }

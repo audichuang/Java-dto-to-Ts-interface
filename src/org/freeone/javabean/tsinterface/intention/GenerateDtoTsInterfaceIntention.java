@@ -18,7 +18,8 @@ import com.intellij.util.IncorrectOperationException;
 import org.freeone.javabean.tsinterface.service.DtoTypescriptGeneratorService;
 import org.freeone.javabean.tsinterface.swing.TypescriptInterfaceShowerWrapper;
 import org.freeone.javabean.tsinterface.util.TypescriptContentGenerator;
-import org.freeone.javabean.tsinterface.setting.JavaBeanToTypescriptInterfaceSettingsState;
+import org.freeone.javabean.tsinterface.setting.JavaBeanToTypescriptInterfaceProjectSettings;
+import org.freeone.javabean.tsinterface.util.CommonUtils;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import com.intellij.notification.Notification;
@@ -250,27 +251,81 @@ public class GenerateDtoTsInterfaceIntention extends PsiElementBaseIntentionActi
      * 判斷一個類是否為 DTO 類
      */
     private boolean isDtoClass(PsiClass psiClass) {
-        // 通常 DTO 類是普通 Java 類，不是接口、枚舉或者註解
+        // 確保不是接口、枚舉或註解
         if (psiClass.isInterface() || psiClass.isEnum() || psiClass.isAnnotationType()) {
             return false;
         }
 
-        // 通常 DTO 類名稱包含一些特定的模式
+        // 獲取類名
         String className = psiClass.getName();
         if (className == null) {
             return false;
         }
 
-        // 使用設置中的自定義後綴列表進行檢查
-        List<String> suffixes = JavaBeanToTypescriptInterfaceSettingsState.getInstance().getCustomDtoSuffixes();
-        for (String suffix : suffixes) {
+        System.out.println("Intention檢查類是否為DTO: " + className);
+
+        // 大小寫不敏感的檢查
+        String lowerClassName = className.toLowerCase();
+
+        // 檢查是否包含Qrystatement、Query或Qry
+        if (lowerClassName.contains("qrystatement") ||
+                lowerClassName.contains("qry") ||
+                lowerClassName.contains("query")) {
+            System.out.println("  Intention匹配到查詢關鍵字: " + className);
+            return true;
+        }
+
+        // 獲取項目設置
+        Project project = psiClass.getProject();
+        JavaBeanToTypescriptInterfaceProjectSettings settings = CommonUtils.getProjectSettings(project);
+
+        // 輸出調試信息
+        System.out.println("  Intention當前項目設置中請求DTO後綴: " + settings.getEffectiveRequestDtoSuffixes());
+        System.out.println("  Intention當前項目設置中響應DTO後綴: " + settings.getEffectiveResponseDtoSuffixes());
+
+        // 檢查是否包含常見的DTO相關詞
+        if (lowerClassName.contains("dto") ||
+                lowerClassName.contains("model") ||
+                lowerClassName.contains("bean") ||
+                lowerClassName.contains("vo") ||
+                lowerClassName.contains("entity") ||
+                lowerClassName.contains("request") ||
+                lowerClassName.contains("response") ||
+                lowerClassName.contains("result")) {
+            System.out.println("  Intention匹配到常見DTO關鍵字: " + className);
+            return true;
+        }
+
+        // 檢查請求DTO後綴
+        List<String> requestSuffixes = settings.getEffectiveRequestDtoSuffixes();
+        for (String suffix : requestSuffixes) {
             if (className.endsWith(suffix)) {
+                System.out.println("  Intention匹配到請求DTO後綴 " + suffix + ": " + className);
                 return true;
             }
         }
 
-        // 检查类中是否存在公开的字段或者 getter/setter 方法
-        // 通常 DTO 类会包含多个公开字段或 getter/setter 方法
+        // 檢查響應DTO後綴
+        List<String> responseSuffixes = settings.getEffectiveResponseDtoSuffixes();
+        for (String suffix : responseSuffixes) {
+            if (className.endsWith(suffix)) {
+                System.out.println("  Intention匹配到響應DTO後綴 " + suffix + ": " + className);
+                return true;
+            }
+        }
+
+        // 如果後綴檢查沒通過，則檢查類結構
+        boolean isDto = checkClassStructure(psiClass);
+        System.out.println("  Intention基於類結構判斷 " + className + " 是否為DTO: " + isDto);
+        return isDto;
+    }
+
+    /**
+     * 根據類結構判斷是否為DTO類
+     */
+    private boolean checkClassStructure(PsiClass psiClass) {
+        // 檢查類中是否存在公開的字段或者 getter/setter 方法
+        // 通常 DTO 類會包含多個公開字段或 getter/setter 方法
         PsiField[] fields = psiClass.getFields();
         if (fields.length > 0) {
             int publicFieldCount = 0;
@@ -279,13 +334,13 @@ public class GenerateDtoTsInterfaceIntention extends PsiElementBaseIntentionActi
                     publicFieldCount++;
                 }
             }
-            // 如果有多个公开字段，可能是数据传输对象
+            // 如果有多個公開字段，可能是數據傳輸對象
             if (publicFieldCount > 2) {
                 return true;
             }
         }
 
-        // 检查 getter/setter 方法
+        // 檢查 getter/setter 方法
         PsiMethod[] methods = psiClass.getMethods();
         int getterSetterCount = 0;
         for (PsiMethod method : methods) {
@@ -296,7 +351,7 @@ public class GenerateDtoTsInterfaceIntention extends PsiElementBaseIntentionActi
                 getterSetterCount++;
             }
         }
-        // 如果有多个 getter/setter 方法，可能是 DTO
+        // 如果有多個 getter/setter 方法，可能是 DTO
         return getterSetterCount > 3;
     }
 

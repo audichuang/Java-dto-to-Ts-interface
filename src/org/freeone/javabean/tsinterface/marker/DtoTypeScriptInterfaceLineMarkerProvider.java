@@ -7,7 +7,8 @@ import com.intellij.codeInsight.daemon.LineMarkerProviderDescriptor;
 import com.intellij.openapi.editor.markup.GutterIconRenderer;
 import com.intellij.openapi.project.Project;
 import com.intellij.psi.*;
-import org.freeone.javabean.tsinterface.setting.JavaBeanToTypescriptInterfaceSettingsState;
+import org.freeone.javabean.tsinterface.setting.JavaBeanToTypescriptInterfaceProjectSettings;
+import org.freeone.javabean.tsinterface.util.CommonUtils;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -149,53 +150,106 @@ public class DtoTypeScriptInterfaceLineMarkerProvider extends LineMarkerProvider
      * 判斷一個類是否為 DTO 類
      */
     private boolean isDtoClass(PsiClass psiClass) {
-        // 通常 DTO 類是普通 Java 類，不是接口、枚舉或者註解
+        // 確保不是接口、枚舉或註解
         if (psiClass.isInterface() || psiClass.isEnum() || psiClass.isAnnotationType()) {
             return false;
         }
 
-        // 通常 DTO 類名稱包含一些特定的模式
+        // 獲取類名
         String className = psiClass.getName();
         if (className == null) {
             return false;
         }
 
-        // 使用設置中的自定義後綴列表進行檢查
-        List<String> suffixes = JavaBeanToTypescriptInterfaceSettingsState.getInstance().getCustomDtoSuffixes();
-        for (String suffix : suffixes) {
+        System.out.println("檢查類是否為DTO: " + className);
+
+        // 大小寫不敏感的檢查
+        String lowerClassName = className.toLowerCase();
+
+        // 檢查是否包含Qrystatement、Query或Qry
+        if (lowerClassName.contains("qrystatement") ||
+                lowerClassName.contains("query") ||
+                lowerClassName.contains("qry")) {
+            System.out.println("  匹配到查詢關鍵字: " + className);
+            return true;
+        }
+
+        // 獲取項目設置
+        Project project = psiClass.getProject();
+        JavaBeanToTypescriptInterfaceProjectSettings settings = CommonUtils.getProjectSettings(project);
+
+        // 輸出調試信息
+        System.out.println("  當前項目設置中請求DTO後綴: " + settings.getEffectiveRequestDtoSuffixes());
+        System.out.println("  當前項目設置中響應DTO後綴: " + settings.getEffectiveResponseDtoSuffixes());
+
+        // 檢查類名是否包含配置的請求DTO後綴
+        for (String suffix : settings.getEffectiveRequestDtoSuffixes()) {
             if (className.endsWith(suffix)) {
+                System.out.println("  匹配到請求DTO後綴 " + suffix + ": " + className);
                 return true;
             }
         }
 
-        // 檢查類中是否存在公開的字段或者 getter/setter 方法
-        // 通常 DTO 類會包含多個公開字段或 getter/setter 方法
+        // 檢查類名是否包含配置的響應DTO後綴
+        for (String suffix : settings.getEffectiveResponseDtoSuffixes()) {
+            if (className.endsWith(suffix)) {
+                System.out.println("  匹配到響應DTO後綴 " + suffix + ": " + className);
+                return true;
+            }
+        }
+
+        // 檢查是否包含常見的DTO相關詞
+        if (lowerClassName.contains("dto") ||
+                lowerClassName.contains("model") ||
+                lowerClassName.contains("bean") ||
+                lowerClassName.contains("vo") ||
+                lowerClassName.contains("entity") ||
+                lowerClassName.contains("request") ||
+                lowerClassName.contains("response") ||
+                lowerClassName.contains("result")) {
+            System.out.println("  匹配到常見DTO關鍵字: " + className);
+            return true;
+        }
+
+        // 如果上述檢查都未通過，則檢查類結構
+        boolean isDto = checkClassStructure(psiClass);
+        System.out.println("  基於類結構判斷 " + className + " 是否為DTO: " + isDto);
+        return isDto;
+    }
+
+    /**
+     * 根據類結構判斷是否為DTO類
+     */
+    private boolean checkClassStructure(PsiClass psiClass) {
+        // 獲取所有公共字段
         PsiField[] fields = psiClass.getFields();
-        if (fields.length > 0) {
-            int publicFieldCount = 0;
-            for (PsiField field : fields) {
-                if (field.hasModifierProperty(PsiModifier.PUBLIC)) {
-                    publicFieldCount++;
-                }
-            }
-            // 如果有多個公開字段，可能是數據傳輸對象
-            if (publicFieldCount > 2) {
-                return true;
+        int publicFieldCount = 0;
+        for (PsiField field : fields) {
+            if (field.hasModifierProperty(PsiModifier.PUBLIC)) {
+                publicFieldCount++;
             }
         }
 
-        // 檢查 getter/setter 方法
+        System.out.println("  類 " + psiClass.getName() + " 公共字段數量: " + publicFieldCount);
+
+        // 獲取所有 getter/setter 方法
         PsiMethod[] methods = psiClass.getMethods();
         int getterSetterCount = 0;
         for (PsiMethod method : methods) {
             String methodName = method.getName();
-            if ((methodName.startsWith("get") || methodName.startsWith("set")) &&
-                    methodName.length() > 3 &&
-                    Character.isUpperCase(methodName.charAt(3))) {
+            if ((methodName.startsWith("get") && methodName.length() > 3 && method.getParameterList().isEmpty())
+                    || (methodName.startsWith("set") && methodName.length() > 3
+                            && method.getParameterList().getParametersCount() == 1)) {
                 getterSetterCount++;
             }
         }
-        // 如果有多個 getter/setter 方法，可能是 DTO
-        return getterSetterCount > 3;
+
+        System.out.println("  類 " + psiClass.getName() + " getter/setter方法數量: " + getterSetterCount);
+
+        // 如果公共字段超過2個或者 getter/setter 方法超過3個，則可能是 DTO 類
+        boolean isDto = publicFieldCount > 2 || getterSetterCount > 3;
+        System.out.println(
+                "  基於結構判斷 " + psiClass.getName() + " 是DTO: " + isDto + " (publicFields > 2 或 getterSetter > 3)");
+        return isDto;
     }
 }

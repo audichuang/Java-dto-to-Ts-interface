@@ -2,15 +2,28 @@ package org.freeone.javabean.tsinterface.service;
 
 import com.intellij.notification.*;
 import com.intellij.openapi.application.ApplicationManager;
+import com.intellij.openapi.application.ModalityState;
+import com.intellij.openapi.application.ReadAction;
 import com.intellij.openapi.fileChooser.FileChooser;
 import com.intellij.openapi.fileChooser.FileChooserDescriptor;
 import com.intellij.openapi.project.Project;
+import com.intellij.openapi.editor.Document;
+import com.intellij.openapi.editor.Editor;
 import com.intellij.openapi.ui.Messages;
 import com.intellij.openapi.vfs.VirtualFile;
 import com.intellij.psi.PsiClass;
+import com.intellij.psi.PsiField;
+import com.intellij.psi.PsiMethod;
+import com.intellij.psi.PsiModifier;
+import com.intellij.psi.PsiParameter;
+import com.intellij.psi.PsiType;
+import com.intellij.psi.PsiClassType;
+import org.freeone.javabean.tsinterface.setting.JavaBeanToTypescriptInterfaceProjectSettings;
+import org.freeone.javabean.tsinterface.setting.JavaBeanToTypescriptInterfaceSettingsState;
 import org.freeone.javabean.tsinterface.swing.TypescriptInterfaceShowerWrapper;
 import org.freeone.javabean.tsinterface.util.CommonUtils;
 import org.freeone.javabean.tsinterface.util.TypescriptContentGenerator;
+import org.freeone.javabean.tsinterface.util.TypescriptUtils;
 
 import javax.swing.*;
 import java.awt.*;
@@ -22,6 +35,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -247,5 +261,116 @@ public class DtoTypescriptGeneratorService {
                 notification.notify(project);
             }
         }, com.intellij.openapi.application.ModalityState.defaultModalityState());
+    }
+
+    // 使用項目級設定
+    private static List<PsiClass> collectDtoClasses(Project project, PsiMethod method) {
+        return ReadAction.compute(() -> {
+            List<PsiClass> dtoClasses = new ArrayList<>();
+
+            // 檢查返回類型
+            PsiType returnType = method.getReturnType();
+            if (returnType != null) {
+                addDtoClassesFromType(project, returnType, dtoClasses);
+            }
+
+            // 檢查參數類型
+            PsiParameter[] parameters = method.getParameterList().getParameters();
+            for (PsiParameter parameter : parameters) {
+                PsiType parameterType = parameter.getType();
+                addDtoClassesFromType(project, parameterType, dtoClasses);
+            }
+
+            return dtoClasses;
+        });
+    }
+
+    /**
+     * 從類型中提取 DTO 類
+     */
+    private static void addDtoClassesFromType(Project project, PsiType type, List<PsiClass> dtoClasses) {
+        // 處理泛型類型
+        if (type instanceof PsiClassType) {
+            PsiClassType classType = (PsiClassType) type;
+            PsiClass psiClass = ReadAction.compute(() -> classType.resolve());
+
+            if (psiClass != null && isDtoClass(project, psiClass)) {
+                dtoClasses.add(psiClass);
+            }
+
+            // 處理泛型參數
+            PsiType[] parameters = classType.getParameters();
+            for (PsiType parameter : parameters) {
+                addDtoClassesFromType(project, parameter, dtoClasses);
+            }
+        }
+    }
+
+    /**
+     * 檢查是否為DTO類
+     */
+    private static boolean isDtoClass(Project project, PsiClass psiClass) {
+        // 確保不是接口、枚舉或註解
+        if (psiClass.isInterface() || psiClass.isEnum() || psiClass.isAnnotationType()) {
+            return false;
+        }
+
+        // 獲取類名
+        String className = psiClass.getName();
+        if (className == null) {
+            return false;
+        }
+
+        System.out.println("Service檢查類是否為DTO: " + className);
+
+        // 大小寫不敏感的檢查
+        String lowerClassName = className.toLowerCase();
+
+        // 檢查是否包含Qrystatement、Query或Qry
+        if (lowerClassName.contains("qrystatement") ||
+                lowerClassName.contains("qry") ||
+                lowerClassName.contains("query")) {
+            System.out.println("  Service匹配到查詢關鍵字: " + className);
+            return true;
+        }
+
+        // 獲取項目設置
+        JavaBeanToTypescriptInterfaceProjectSettings settings = CommonUtils.getProjectSettings(project);
+
+        // 輸出調試信息
+        System.out.println("  Service當前項目設置中請求DTO後綴: " + settings.getEffectiveRequestDtoSuffixes());
+        System.out.println("  Service當前項目設置中響應DTO後綴: " + settings.getEffectiveResponseDtoSuffixes());
+
+        // 檢查類名是否包含配置的請求DTO後綴
+        for (String suffix : settings.getEffectiveRequestDtoSuffixes()) {
+            if (className.endsWith(suffix)) {
+                System.out.println("  Service匹配到請求DTO後綴 " + suffix + ": " + className);
+                return true;
+            }
+        }
+
+        // 檢查類名是否包含配置的響應DTO後綴
+        for (String suffix : settings.getEffectiveResponseDtoSuffixes()) {
+            if (className.endsWith(suffix)) {
+                System.out.println("  Service匹配到響應DTO後綴 " + suffix + ": " + className);
+                return true;
+            }
+        }
+
+        // 檢查是否包含常見的DTO相關詞
+        if (lowerClassName.contains("dto") ||
+                lowerClassName.contains("model") ||
+                lowerClassName.contains("bean") ||
+                lowerClassName.contains("vo") ||
+                lowerClassName.contains("entity") ||
+                lowerClassName.contains("request") ||
+                lowerClassName.contains("response") ||
+                lowerClassName.contains("result")) {
+            System.out.println("  Service匹配到常見DTO關鍵字: " + className);
+            return true;
+        }
+
+        // 如果上述檢查都未通過，則檢查類結構
+        return false; // 在服務中，不使用結構檢查以提高性能
     }
 }
