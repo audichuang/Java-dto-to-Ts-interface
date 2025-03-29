@@ -11,9 +11,6 @@ import org.apache.commons.lang3.StringUtils;
 import org.freeone.javabean.tsinterface.setting.JavaBeanToTypescriptInterfaceSettingsState;
 
 import java.util.*;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-import java.util.stream.Collectors;
 
 /**
  * 用于生成文件
@@ -238,77 +235,8 @@ public class TypescriptContentGenerator {
         // 4. 其他類
         contentList.addAll(otherClasses.values());
 
-        // 進行最終嵌套類替換處理
-        List<String> processedContentList = new ArrayList<>();
-        for (String content : contentList) {
-            String processedContent = content;
-
-            // 1. 首先替換介面聲明部分 - 這是關鍵修正
-            for (Map.Entry<String, String> entry : CLASS_NAME_WITH_PACKAGE_2_TS_INTERFACE_NAME.entrySet()) {
-                String fullClassName = entry.getKey();
-                String simpleClassName = fullClassName.substring(fullClassName.lastIndexOf('.') + 1);
-                String newInterfaceName = entry.getValue();
-
-                // 檢查並替換介面聲明
-                if (!simpleClassName.equals(newInterfaceName)) {
-                    String interfacePattern = "interface " + simpleClassName + " \\{";
-                    String replacementPattern = "interface " + newInterfaceName + " {";
-
-                    // 使用正則表達式匹配完整的介面聲明
-                    Pattern pattern = Pattern.compile(interfacePattern);
-                    Matcher matcher = pattern.matcher(processedContent);
-
-                    if (matcher.find()) {
-                        processedContent = matcher.replaceAll(replacementPattern);
-                        System.out.println("替換介面聲明: " + simpleClassName + " -> " + newInterfaceName);
-                    }
-                }
-            }
-
-            // 2. 然後替換引用部分
-            for (Map.Entry<String, String> entry : CLASS_NAME_WITH_PACKAGE_2_TS_INTERFACE_NAME.entrySet()) {
-                String fullClassName = entry.getKey();
-                String simpleClassName = fullClassName.substring(fullClassName.lastIndexOf('.') + 1);
-                String newInterfaceName = entry.getValue();
-
-                // 排除已經處理過的介面聲明
-                if (!simpleClassName.equals(newInterfaceName)) {
-                    // 標準類型引用
-                    if (processedContent.contains(": " + simpleClassName + ";")) {
-                        processedContent = processedContent.replace(": " + simpleClassName + ";",
-                                ": " + newInterfaceName + ";");
-                    }
-
-                    // 數組引用
-                    if (processedContent.contains(": " + simpleClassName + "[]")) {
-                        processedContent = processedContent.replace(": " + simpleClassName + "[]",
-                                ": " + newInterfaceName + "[]");
-                    }
-
-                    // 可選屬性引用
-                    if (processedContent.contains("?: " + simpleClassName + ";")) {
-                        processedContent = processedContent.replace("?: " + simpleClassName + ";",
-                                "?: " + newInterfaceName + ";");
-                    }
-                }
-            }
-
-            // 3. 還需要處理 export interface 部分
-            for (Map.Entry<String, String> entry : CLASS_NAME_WITH_PACKAGE_2_TS_INTERFACE_NAME.entrySet()) {
-                String fullClassName = entry.getKey();
-                String simpleClassName = fullClassName.substring(fullClassName.lastIndexOf('.') + 1);
-                String newInterfaceName = entry.getValue();
-
-                if (!simpleClassName.equals(newInterfaceName)) {
-                    String exportPattern = "export interface " + simpleClassName + " \\{";
-                    String exportReplacement = "export interface " + newInterfaceName + " {";
-
-                    processedContent = processedContent.replaceAll(exportPattern, exportReplacement);
-                }
-            }
-
-            processedContentList.add(processedContent);
-        }
+        // 使用最終清理方法處理所有內容
+        List<String> processedContentList = performFinalCleanup(contentList);
 
         // 最後清理內容，移除對跳過類的引用，以避免未定義錯誤
         if (!skippedClassNames.isEmpty()) {
@@ -440,7 +368,7 @@ public class TypescriptContentGenerator {
                     typeString = getTypeString(project, fieldType, psiClass);
 
                     // 统一格式化文档注解
-                    if (documentText.trim().length() > 0) {
+                    if (!documentText.trim().isEmpty()) {
                         // 提取注解中的有效内容
                         String commentContent = extractCommentContent(documentText);
                         if (!commentContent.isEmpty()) {
@@ -660,7 +588,7 @@ public class TypescriptContentGenerator {
         }
         List<PsiType> numberSuperClass = Arrays.stream(psiType.getSuperTypes())
                 .filter(superTypeItem -> superTypeItem.getCanonicalText().equals("java.lang.Number"))
-                .collect(Collectors.toList());
+                .toList();
         if (!numberSuperClass.isEmpty()) {
             return "number";
         }
@@ -817,27 +745,6 @@ public class TypescriptContentGenerator {
             }
         }
 
-        // 嘗試查找相關的主類以獲取電文代號前綴
-        for (Map.Entry<String, String> entry : CLASS_NAME_WITH_PACKAGE_2_TS_INTERFACE_NAME.entrySet()) {
-            String tsInterfaceName = entry.getValue();
-
-            if (tsInterfaceName.contains("Req") || tsInterfaceName.contains("Resp")) {
-                // 提取前綴
-                int suffixIndex = Math.max(
-                        tsInterfaceName.indexOf("Req"),
-                        tsInterfaceName.indexOf("Resp"));
-
-                if (suffixIndex > 0) {
-                    String prefix = tsInterfaceName.substring(0, suffixIndex);
-
-                    // 使用分析結果決定是請求還是響應
-                    boolean isRequest = usageInfo.isRequest;
-
-                    return processNestedClassName(prefix, originalName, isRequest);
-                }
-            }
-        }
-
         // 未找到電文代號，返回原名稱
         return originalName;
     }
@@ -909,46 +816,8 @@ public class TypescriptContentGenerator {
 
     // 處理嵌套類名稱
     private static String processNestedClassName(String mainClassPrefix, String nestedClassName, boolean isRequest) {
-        // 從嵌套類名中移除原始前綴
-        String baseName = nestedClassName;
-
-        // 特別處理 QryStatement 開頭的類型
-        if (baseName.startsWith("QryStatement")) {
-            // 移除 QryStatement 前綴以及 Tranrq、Tranrs 部分
-            String uniquePart = baseName
-                    .replace("QryStatement", "")
-                    .replace("Tranrq", "")
-                    .replace("Tranrs", "");
-
-            // 根據是請求還是響應類型決定後綴
-            String suffix = isRequest ? "Req" : "Resp";
-
-            // 如果處理後還有內容，則組合新的名稱
-            if (!uniquePart.isEmpty()) {
-                return mainClassPrefix + suffix + uniquePart;
-            }
-        }
-
-        // 根據是請求還是響應類型決定後綴
         String suffix = isRequest ? "Req" : "Resp";
-
-        // 對於一般嵌套類，保留其獨特部分，加上前綴和後綴
-        // 首先嘗試移除包含 "Tranrq" 或 "Tranrs" 的部分
-        String uniquePart = baseName
-                .replace("Tranrq", "")
-                .replace("Tranrs", "")
-                .replace("Request", "")
-                .replace("Response", "")
-                .replace("Req", "")
-                .replace("Resp", "");
-
-        // 如果移除後為空，使用原名稱
-        if (uniquePart.isEmpty()) {
-            uniquePart = baseName;
-        }
-
-        // 返回新的名稱
-        return mainClassPrefix + suffix + uniquePart;
+        return mainClassPrefix + suffix + nestedClassName;
     }
 
     /**
@@ -962,12 +831,12 @@ public class TypescriptContentGenerator {
      * @return
      */
     public static String createInterfaceContentByFieldInfo(Map<String, String> fieldNameAndDocCommentMap,
-            Map<String, String> typeNameMap,
-            Set<String> requireFieldNameSet,
-            Project project,
-            String interfaceName) {
+                                                           Map<String, String> typeNameMap,
+                                                           Set<String> requireFieldNameSet,
+                                                           Project project,
+                                                           String interfaceName) {
         StringBuffer buffer = new StringBuffer();
-        buffer.append("export interface " + interfaceName + " {\n");
+        buffer.append("export interface ").append(interfaceName).append(" {\n");
 
         // 預處理所有引用的類型名稱，確保嵌套和關聯類型使用一致的命名規則
         Map<String, String> processedTypeNameMap = new HashMap<>(typeNameMap);
@@ -979,7 +848,7 @@ public class TypescriptContentGenerator {
 
         for (String fieldName : fieldNameList) {
             String value = fieldNameAndDocCommentMap.get(fieldName);
-            if (null != value && !"".equals(value.trim())) {
+            if (null != value && !value.trim().isEmpty()) {
                 buffer.append(value);
             }
             String typeName = processedTypeNameMap.get(fieldName);
@@ -989,7 +858,7 @@ public class TypescriptContentGenerator {
             if (!requireFieldNameSet.contains(fieldName)) {
                 buffer.append("?");
             }
-            buffer.append(": " + typeName);
+            buffer.append(": ").append(typeName);
             buffer.append(";\n\n");
         }
         buffer.append("}\n");
@@ -1019,47 +888,47 @@ public class TypescriptContentGenerator {
                             !typeName.equals("unknown") &&
                             !typeName.startsWith(transactionCodePrefix)) {
 
-                        // 直接處理常見的嵌套類名稱模式
-                        if (typeName.contains("QryStatement") ||
-                                typeName.contains("Tranrq") ||
-                                typeName.contains("Tranrs")) {
-
-                            // 生成新的類型名稱
-                            String newTypeName = transactionCodePrefix;
-
-                            // 添加請求/響應後綴
-                            newTypeName += isRequest ? "Req" : "Resp";
-
-                            // 如果沒有特定後綴，嘗試提取類名中的唯一部分
-                            String originalName = typeName;
-                            int lastDotIndex = originalName.lastIndexOf('.');
-                            if (lastDotIndex > 0) {
-                                originalName = originalName.substring(lastDotIndex + 1);
-                            }
-
-                            // 移除已知的前綴和後綴
-                            String uniquePart = originalName
-                                    .replace("QryStatement", "")
-                                    .replace("Tranrq", "")
-                                    .replace("Tranrs", "")
-                                    .replace("Request", "")
-                                    .replace("Response", "")
-                                    .replace("Req", "")
-                                    .replace("Resp", "");
-
-                            // 如果提取後還有內容，添加到新名稱中
-                            if (!uniquePart.isEmpty()) {
-                                newTypeName += uniquePart;
-                            }
-
-                            // 更新類型名稱映射
-                            typeNameMap.put(entry.getKey(), newTypeName);
-
-                            // 同時更新全局類名映射，以便其他地方引用時能夠一致
-                            CLASS_NAME_WITH_PACKAGE_2_TS_INTERFACE_NAME.put(typeName, newTypeName);
-
-                            System.out.println("更新嵌套類型名稱: " + typeName + " -> " + newTypeName);
-                        }
+                        // // 直接處理常見的嵌套類名稱模式
+                        // if (typeName.contains("QryStatement") ||
+                        // typeName.contains("Tranrq") ||
+                        // typeName.contains("Tranrs")) {
+                        //
+                        // // 生成新的類型名稱
+                        // String newTypeName = transactionCodePrefix;
+                        //
+                        // // 添加請求/響應後綴
+                        // newTypeName += isRequest ? "Req" : "Resp";
+                        //
+                        // // 如果沒有特定後綴，嘗試提取類名中的唯一部分
+                        // String originalName = typeName;
+                        // int lastDotIndex = originalName.lastIndexOf('.');
+                        // if (lastDotIndex > 0) {
+                        // originalName = originalName.substring(lastDotIndex + 1);
+                        // }
+                        //
+                        // // // 移除已知的前綴和後綴
+                        // // String uniquePart = originalName
+                        // // .replace("QryStatement", "")
+                        // // .replace("Tranrq", "")
+                        // // .replace("Tranrs", "")
+                        // // .replace("Request", "")
+                        // // .replace("Response", "")
+                        // // .replace("Req", "")
+                        // // .replace("Resp", "");
+                        // //
+                        // // // 如果提取後還有內容，添加到新名稱中
+                        // // if (!uniquePart.isEmpty()) {
+                        // // newTypeName += uniquePart;
+                        // // }
+                        //
+                        // // 更新類型名稱映射
+                        // typeNameMap.put(entry.getKey(), newTypeName);
+                        //
+                        // // 同時更新全局類名映射，以便其他地方引用時能夠一致
+                        // CLASS_NAME_WITH_PACKAGE_2_TS_INTERFACE_NAME.put(typeName, newTypeName);
+                        //
+                        // System.out.println("更新嵌套類型名稱: " + typeName + " -> " + newTypeName);
+                        // }
                     }
                 }
             }
@@ -1109,6 +978,9 @@ public class TypescriptContentGenerator {
         return (hasContainerName && hasTypeParameters) || isHeaderClass;
     }
 
+    /**
+     * 處理嵌套類命名 - 基於引用關係識別嵌套類
+     */
     private static void processNestedClassesBasedOnReferences() {
         System.out.println("執行processNestedClassesBasedOnReferences，引用關係數量: " + CLASS_REFERENCES.size());
 
@@ -1117,46 +989,29 @@ public class TypescriptContentGenerator {
         Map<String, String> mainClassSuffixes = new HashMap<>(); // 類名 -> 使用的後綴
         Map<String, Boolean> isRequestMap = new HashMap<>();
 
+        // 找出所有已命名的類及其後綴
         for (Map.Entry<String, String> entry : CLASS_NAME_WITH_PACKAGE_2_TS_INTERFACE_NAME.entrySet()) {
             String className = entry.getKey();
             String tsInterfaceName = entry.getValue();
 
-            // 檢查電文相關後綴
-            String suffix = "";
-            boolean isRequest = false;
+            // 尋找所有可能的後綴
+            String[] possibleSuffixes = {"Req", "Request", "Resp", "Response", "Res", "Rs"};
 
-            // 檢查請求類後綴
-            for (String reqSuffix : CommonUtils.getSettings().getRequestDtoSuffixes()) {
-                if (tsInterfaceName.endsWith(reqSuffix)) {
-                    suffix = reqSuffix;
-                    isRequest = true;
-                    break;
-                }
-            }
+            for (String suffix : possibleSuffixes) {
+                if (tsInterfaceName.endsWith(suffix)) {
+                    int suffixIndex = tsInterfaceName.lastIndexOf(suffix);
+                    if (suffixIndex > 0) {
+                        // 找到一個主類
+                        String prefix = tsInterfaceName.substring(0, suffixIndex);
+                        mainClasses.put(className, prefix);
+                        mainClassSuffixes.put(className, suffix);
+                        isRequestMap.put(className, suffix.startsWith("Req"));
 
-            // 檢查響應類後綴
-            if (suffix.isEmpty()) {
-                for (String respSuffix : CommonUtils.getSettings().getResponseDtoSuffixes()) {
-                    if (tsInterfaceName.endsWith(respSuffix)) {
-                        suffix = respSuffix;
-                        isRequest = false;
+                        System.out.println("找到主類: " + className + " -> " + tsInterfaceName +
+                                ", 前綴: " + prefix + ", 後綴: " + suffix +
+                                ", 是請求類: " + isRequestMap.get(className));
                         break;
                     }
-                }
-            }
-
-            // 提取電文代號前綴
-            if (!suffix.isEmpty()) {
-                int suffixIndex = tsInterfaceName.lastIndexOf(suffix);
-                if (suffixIndex > 0) {
-                    String prefix = tsInterfaceName.substring(0, suffixIndex);
-                    mainClasses.put(className, prefix);
-                    mainClassSuffixes.put(className, suffix);
-                    isRequestMap.put(className, isRequest);
-
-                    System.out.println("找到主類: " + className + " -> " + tsInterfaceName +
-                            ", 前綴: " + prefix + ", 後綴: " + suffix +
-                            ", 是請求類: " + isRequest);
                 }
             }
         }
@@ -1171,6 +1026,9 @@ public class TypescriptContentGenerator {
             String prefix = mainClasses.get(mainClass);
             boolean isRequest = isRequestMap.get(mainClass);
             String exactSuffix = mainClassSuffixes.get(mainClass);
+            String mainSimpleClassName = getSimpleName(mainClass);
+
+            System.out.println("處理主類 " + mainClass + " 使用後綴: " + exactSuffix);
 
             // 獲取此主類引用的所有類
             Set<String> referencedClasses = CLASS_REFERENCES.getOrDefault(mainClass, new HashSet<>());
@@ -1181,12 +1039,15 @@ public class TypescriptContentGenerator {
                     continue;
                 }
 
-                String simpleClassName = referencedClass.substring(referencedClass.lastIndexOf('.') + 1);
+                String simpleClassName = getSimpleName(referencedClass);
 
-                // 提取唯一部分
-                String uniquePart = extractUniqueClassPart(simpleClassName);
+                // 智能分析嵌套部分
+                String uniquePart;
 
-                // 生成新的介面名稱，使用與主類相同的後綴
+                // 嘗試以主類名稱為上下文提取唯一部分
+                uniquePart = extractUniqueClassPart(simpleClassName, mainSimpleClassName);
+
+                // 使用與主類完全相同的後綴，確保一致性
                 String newInterfaceName = prefix + exactSuffix + uniquePart;
 
                 // 記錄重命名映射
@@ -1208,29 +1069,29 @@ public class TypescriptContentGenerator {
      * 遞歸處理嵌套類引用關係，使用確切的後綴
      */
     private static void processNestedClassesRecursively(Set<String> parentClasses, String prefix,
-            String exactSuffix, Map<String, String> renameMap) {
+                                                        String exactSuffix, Map<String, String> renameMap) {
         // 收集下一層的嵌套類
         Set<String> nextLevelClasses = new HashSet<>();
 
         for (String parentClass : parentClasses) {
+            // 獲取父類的簡單名稱，用於上下文
+            String parentSimpleClassName = getSimpleName(parentClass);
+
             // 獲取此類引用的所有類
             Set<String> referencedClasses = CLASS_REFERENCES.getOrDefault(parentClass, new HashSet<>());
 
             for (String referencedClass : referencedClasses) {
-                // 跳過標準庫類
-                if (referencedClass.startsWith("java.") || referencedClass.startsWith("javax.")) {
+                // 跳過標準庫類和已處理的類
+                if (referencedClass.startsWith("java.") ||
+                        referencedClass.startsWith("javax.") ||
+                        renameMap.containsKey(referencedClass)) {
                     continue;
                 }
 
-                // 避免處理已經處理過的類
-                if (renameMap.containsKey(referencedClass)) {
-                    continue;
-                }
+                String simpleClassName = getSimpleName(referencedClass);
 
-                String simpleClassName = referencedClass.substring(referencedClass.lastIndexOf('.') + 1);
-
-                // 提取唯一部分
-                String uniquePart = extractUniqueClassPart(simpleClassName);
+                // 使用父類上下文提取唯一部分
+                String uniquePart = extractUniqueClassPart(simpleClassName, parentSimpleClassName);
 
                 // 生成新的介面名稱，使用相同的後綴
                 String newInterfaceName = prefix + exactSuffix + uniquePart;
@@ -1251,31 +1112,48 @@ public class TypescriptContentGenerator {
     }
 
     /**
-     * 提取唯一的類名部分 (去除常見前綴和後綴)
+     * 從嵌套類名中提取唯一部分的通用算法
+     *
+     * @param simpleClassName 簡單類名
+     * @param parentClassName 可選的父類名，如果知道的話
+     * @return 提取出的唯一部分
      */
-    private static String extractUniqueClassPart(String simpleClassName) {
-
-        // 移除常見的前綴和後綴
-        String result = simpleClassName
-                .replace("QryStatement", "")
-                .replace("Tranrq", "")
-                .replace("Tranrs", "")
-                .replace("Request", "")
-                .replace("Response", "")
-                .replace("Req", "")
-                .replace("Resp", "");
-
-        // 如果完全被移除了，返回原名
-        if (result.isEmpty()) {
-            return simpleClassName;
+    private static String extractUniqueClassPart(String simpleClassName, String... parentClassName) {
+        // 如果提供了父類名，嘗試從嵌套類名中移除父類前綴
+        if (parentClassName != null && parentClassName.length > 0 && parentClassName[0] != null) {
+            String parent = parentClassName[0];
+            if (simpleClassName.startsWith(parent)) {
+                String remaining = simpleClassName.substring(parent.length());
+                if (!remaining.isEmpty()) {
+                    return remaining;
+                }
+            }
         }
 
-        // 確保首字母大寫
-        if (Character.isLowerCase(result.charAt(0))) {
-            result = Character.toUpperCase(result.charAt(0)) + result.substring(1);
+        // 通用情況：尋找CamelCase中的最後一個大寫字母開始的部分
+        int lastCapIndex = -1;
+        for (int i = 1; i < simpleClassName.length(); i++) {
+            if (Character.isUpperCase(simpleClassName.charAt(i))) {
+                lastCapIndex = i;
+            }
         }
 
-        return result;
+        if (lastCapIndex > 0) {
+            return simpleClassName.substring(lastCapIndex);
+        }
+
+        // 嘗試尋找類型後綴 (Dto, Vo, Entity等)
+        String[] commonTypeSuffixes = {"Dto", "Vo", "Entity", "Model", "Bean", "Pojo", "Record", "Tranrq", "Tranrs",
+                "Request", "Response", "Req", "Resp"};
+        for (String suffix : commonTypeSuffixes) {
+            if (simpleClassName.endsWith(suffix)) {
+                // 移除這個後綴
+                return simpleClassName.substring(0, simpleClassName.length() - suffix.length());
+            }
+        }
+
+        // 如果以上都不適用，返回原始類名
+        return simpleClassName;
     }
 
     /**
@@ -1318,24 +1196,24 @@ public class TypescriptContentGenerator {
         for (Map.Entry<String, String> entry : CLASS_NAME_WITH_PACKAGE_2_TS_INTERFACE_NAME.entrySet()) {
             String className = entry.getKey();
             String content = CLASS_NAME_WITH_PACKAGE_2_CONTENT.get(className);
+            String simpleClassName = getSimpleName(className);
+            String newInterfaceName = entry.getValue();
+
+            // 確保所有簡單類名都有映射
+            simpleNameRenameMap.put(simpleClassName, newInterfaceName);
 
             if (content != null) {
                 String currentInterfaceName = extractInterfaceName(content);
-                String newInterfaceName = entry.getValue();
 
                 if (currentInterfaceName != null && !currentInterfaceName.equals(newInterfaceName)) {
                     // 記錄重命名映射
                     interfaceRenameMap.put(currentInterfaceName, newInterfaceName);
 
-                    // 添加簡單名稱映射
-                    String simpleClassName = getSimpleName(className);
-                    simpleNameRenameMap.put(simpleClassName, newInterfaceName);
-
                     // 更新介面定義
                     content = content.replace("interface " + currentInterfaceName + " {",
                             "interface " + newInterfaceName + " {");
 
-                    // 特別處理介面內容中對自身的引用 - 新增此處理
+                    // 特別處理介面內容中對自身的引用
                     content = content.replace(": " + currentInterfaceName + ";",
                             ": " + newInterfaceName + ";");
                     content = content.replace(": " + currentInterfaceName + "[]",
@@ -1349,77 +1227,71 @@ public class TypescriptContentGenerator {
         System.out.println("介面重命名映射: " + interfaceRenameMap);
         System.out.println("簡單名稱重命名映射: " + simpleNameRenameMap);
 
-        // 合併兩個映射以確保捕獲所有可能的引用格式
-        Map<String, String> allRenameMap = new HashMap<>(interfaceRenameMap);
-        allRenameMap.putAll(simpleNameRenameMap);
+        // 使用多輪替換，確保深層嵌套引用也能被正確替換
+        for (int round = 0; round < 3; round++) {
+            System.out.println("執行第 " + (round + 1) + " 輪引用替換");
+            boolean anyUpdated = false;
 
-        // 更新所有類內容中的引用
-        for (Map.Entry<String, String> entry : new HashMap<>(allClasses).entrySet()) {
-            String className = entry.getKey();
-            String content = entry.getValue();
-            boolean updated = false;
+            // 更新所有類內容中的引用
+            for (Map.Entry<String, String> entry : new HashMap<>(allClasses).entrySet()) {
+                String className = entry.getKey();
+                String content = entry.getValue();
+                boolean updated = false;
 
-            for (Map.Entry<String, String> renameEntry : allRenameMap.entrySet()) {
-                String oldName = renameEntry.getKey();
-                String newName = renameEntry.getValue();
+                // 使用簡單名稱替換加強處理
+                for (Map.Entry<String, String> renameEntry : simpleNameRenameMap.entrySet()) {
+                    String oldName = renameEntry.getKey();
+                    String newName = renameEntry.getValue();
 
-                // 檢查是否存在引用
-                if (content.contains(oldName)) {
-                    System.out.println("在 " + className + " 中發現對 " + oldName + " 的引用");
+                    // 標準類型引用 (強化檢查)
+                    if (content.contains(": " + oldName + ";") ||
+                            content.contains("?: " + oldName + ";") ||
+                            content.contains(": " + oldName + "[") ||
+                            content.contains("?: " + oldName + "[") ||
+                            content.contains(" " + oldName + " ") ||
+                            content.contains(" " + oldName + ",") ||
+                            content.contains("," + oldName + " ") ||
+                            content.contains("<" + oldName + ">") ||
+                            content.contains("interface " + oldName + " {")) {
+                        System.out.println("在 " + className + " 中發現對 " + oldName + " 的引用");
+
+                        // 使用全面的引用替換模式 - 正確接收返回的字串
+                        String updatedContent = replaceAllReferences(content, oldName, newName, className);
+
+                        if (!updatedContent.equals(content)) {
+                            content = updatedContent;
+                            updated = true;
+                        }
+                    }
                 }
 
-                // 使用全面的引用替換模式
-                updated |= replaceAllReferences(content, oldName, newName, className);
-
-                // 特別處理直接類型引用
-                if (content.contains(": " + oldName)) {
-                    System.out.println("替換類型引用: " + oldName + " -> " + newName + " in " + className);
-                    content = content.replace(": " + oldName, ": " + newName);
-                    updated = true;
-                }
-
-                // 數組類型引用
-                if (content.contains(": " + oldName + "[]")) {
-                    content = content.replace(": " + oldName + "[]", ": " + newName + "[]");
-                    updated = true;
-                }
-
-                // 可選屬性引用
-                if (content.contains("?: " + oldName)) {
-                    content = content.replace("?: " + oldName, "?: " + newName);
-                    updated = true;
-                }
-
-                // 泛型參數引用
-                if (content.contains("<" + oldName + ">")) {
-                    content = content.replace("<" + oldName + ">", "<" + newName + ">");
-                    updated = true;
-                }
-
-                // 泛型列表參數
-                if (content.contains("<" + oldName + ",")) {
-                    content = content.replace("<" + oldName + ",", "<" + newName + ",");
-                    updated = true;
-                }
-                if (content.contains(", " + oldName + ">")) {
-                    content = content.replace(", " + oldName + ">", ", " + newName + ">");
-                    updated = true;
+                if (updated) {
+                    System.out.println("更新了 " + className + " 的內容");
+                    allClasses.put(className, content);
+                    CLASS_NAME_WITH_PACKAGE_2_CONTENT.put(className, content);
+                    anyUpdated = true;
                 }
             }
 
-            if (updated) {
-                System.out.println("更新了 " + className + " 的內容");
-                allClasses.put(className, content);
-                CLASS_NAME_WITH_PACKAGE_2_CONTENT.put(className, content);
+            if (!anyUpdated) {
+                System.out.println("沒有更多需要替換的引用，跳出循環");
+                break;
             }
         }
 
         // 最終檢查 - 確保所有內容都被更新
         for (Map.Entry<String, String> entry : allClasses.entrySet()) {
             String content = entry.getValue();
-            for (String oldName : allRenameMap.keySet()) {
-                if (content.contains(oldName)) {
-                    System.out.println("警告: " + entry.getKey() + "中仍存在未替換的類型: " + oldName);
+            for (String oldName : simpleNameRenameMap.keySet()) {
+                if (content.contains(": " + oldName + ";") ||
+                        content.contains("?: " + oldName + ";") ||
+                        content.contains(": " + oldName + "[")) {
+                    System.out.println("警告: " + entry.getKey() + "中仍存在未替換的類型引用: " + oldName);
+                }
+
+                // 檢查介面定義
+                if (content.contains("interface " + oldName + " {")) {
+                    System.out.println("警告: " + entry.getKey() + "中仍存在未替換的介面定義: " + oldName);
                 }
             }
         }
@@ -1427,19 +1299,44 @@ public class TypescriptContentGenerator {
 
     /**
      * 使用正則表達式全面替換引用
+     *
+     * @param content   原始內容
+     * @param oldName   舊名稱
+     * @param newName   新名稱
+     * @param className 當前處理的類名(用於日誌)
+     * @return 替換後的內容
      */
-    private static boolean replaceAllReferences(String content, String oldName, String newName, String className) {
-        boolean updated = false;
+    private static String replaceAllReferences(String content, String oldName, String newName, String className) {
         String originalContent = content;
+
+        // 常規字段引用
+        if (content.contains(": " + oldName + ";")) {
+            content = content.replace(": " + oldName + ";", ": " + newName + ";");
+        }
+
+        // 數組引用
+        if (content.contains(": " + oldName + "[]")) {
+            content = content.replace(": " + oldName + "[]", ": " + newName + "[]");
+        }
+
+        // 可選屬性引用
+        if (content.contains("?: " + oldName + ";")) {
+            content = content.replace("?: " + oldName + ";", "?: " + newName + ";");
+        }
+
+        // 介面定義
+        String interfacePattern = "interface " + oldName + " \\{";
+        String replacementPattern = "interface " + newName + " {";
+        content = content.replaceAll(interfacePattern, replacementPattern);
 
         // 使用正則表達式模式匹配各種引用形式
         String[][] patterns = {
-                { "([^\\w])(", oldName, ")(\\s*[;,:\\[\\]])" }, // 普通類型引用
-                { "([<,]\\s*)(", oldName, ")(\\s*[,>])" }, // 泛型參數
-                { "(:\\s*)(", oldName, ")(\\[\\])" }, // 數組類型
-                { "(\\?:\\s*)(", oldName, ")(\\s*[;,])" }, // 可選屬性
-                { "(extends\\s+)(", oldName, ")(\\s|\\{)" }, // 繼承
-                { "(implements\\s+)(", oldName, ")(\\s|\\{)" } // 實現
+                {"([^\\w])(", oldName, ")(\\s*[;,:\\[\\]])"}, // 普通類型引用
+                {"([<,]\\s*)(", oldName, ")(\\s*[,>])"}, // 泛型參數
+                {"(:\\s*)(", oldName, ")(\\[\\])"}, // 數組類型
+                {"(\\?:\\s*)(", oldName, ")(\\s*[;,])"}, // 可選屬性
+                {"(extends\\s+)(", oldName, ")(\\s|\\{)"}, // 繼承
+                {"(implements\\s+)(", oldName, ")(\\s|\\{)"} // 實現
         };
 
         for (String[] patternParts : patterns) {
@@ -1450,10 +1347,10 @@ public class TypescriptContentGenerator {
 
         // 檢查是否進行了替換
         if (!content.equals(originalContent)) {
-            updated = true;
+            System.out.println("在 " + className + " 中成功替換: " + oldName + " -> " + newName);
         }
 
-        return updated;
+        return content; // 返回替換後的內容
     }
 
     /**
@@ -1509,7 +1406,7 @@ public class TypescriptContentGenerator {
 
     /**
      * 分析一個類是請求還是響應，基於它在方法中的使用方式
-     * 
+     *
      * @param project  當前項目
      * @param psiClass 待分析的類
      * @return true表示是請求類，false表示是響應類
@@ -1518,20 +1415,8 @@ public class TypescriptContentGenerator {
         ClassUsageInfo usageInfo = new ClassUsageInfo();
         usageInfo.className = psiClass.getQualifiedName();
 
-        // 如果類名明確包含標識，優先使用命名規則判斷（保留舊邏輯作為備用）
+        // 如果類名明確包含標識，優先使用命名規則判斷
         String simpleName = psiClass.getName();
-        if (simpleName.endsWith("Tranrq") ||
-                simpleName.endsWith("Request") ||
-                simpleName.endsWith("Req")) {
-            usageInfo.nameBasedIsRequest = true;
-            usageInfo.hasClearNamingPattern = true;
-        } else if (simpleName.endsWith("Tranrs") ||
-                simpleName.endsWith("Response") ||
-                simpleName.endsWith("Resp") ||
-                simpleName.endsWith("Rs")) {
-            usageInfo.nameBasedIsRequest = false;
-            usageInfo.hasClearNamingPattern = true;
-        }
 
         // 查找類的所有引用
         PsiReference[] references = findReferences(project, psiClass);
@@ -1737,5 +1622,94 @@ public class TypescriptContentGenerator {
         int usedAsControllerParameterCount = 0; // 在控制器方法中作為參數使用的次數
         int usedAsControllerReturnValueCount = 0; // 在控制器方法中作為返回值使用的次數
         String confidence = "NONE"; // 判斷的置信度: VERY_LOW, LOW, MEDIUM, HIGH
+    }
+
+    /**
+     * 進行最終的類型引用替換，確保所有引用一致性
+     * 這個方法應該放在 mergeContent 方法中，替換現有的嵌套類替換處理部分
+     */
+    private static List<String> performFinalCleanup(List<String> contentList) {
+        // 建立所有需要替換的映射關係
+        Map<String, String> allRenameMap = new HashMap<>();
+
+        for (Map.Entry<String, String> entry : CLASS_NAME_WITH_PACKAGE_2_TS_INTERFACE_NAME.entrySet()) {
+            String fullClassName = entry.getKey();
+            String simpleClassName = getSimpleName(fullClassName);
+            String newInterfaceName = entry.getValue();
+
+            // 只收集需要重命名的類
+            if (!simpleClassName.equals(newInterfaceName)) {
+                allRenameMap.put(simpleClassName, newInterfaceName);
+                System.out.println("最終清理 - 收集重命名: " + simpleClassName + " -> " + newInterfaceName);
+            }
+        }
+
+        // 處理每個內容
+        List<String> processedList = new ArrayList<>();
+
+        for (String content : contentList) {
+            // 創建一個副本進行處理
+            String processedContent = content;
+
+            // 對每個替換對進行處理
+            for (Map.Entry<String, String> entry : allRenameMap.entrySet()) {
+                String oldName = entry.getKey();
+                String newName = entry.getValue();
+
+                // 替換各種引用形式
+
+                // 1. 介面定義
+                // interface OldName { -> interface NewName {
+                processedContent = processedContent.replaceAll(
+                        "interface\\s+" + oldName + "\\s+\\{",
+                        "interface " + newName + " {");
+
+                // 2. 標準類型引用
+                // : OldName; -> : NewName;
+                processedContent = processedContent.replace(
+                        ": " + oldName + ";",
+                        ": " + newName + ";");
+
+                // 3. 數組引用
+                // : OldName[] -> : NewName[]
+                processedContent = processedContent.replace(
+                        ": " + oldName + "[]",
+                        ": " + newName + "[]");
+
+                // 4. 可選屬性引用
+                // ?: OldName; -> ?: NewName;
+                processedContent = processedContent.replace(
+                        "?: " + oldName + ";",
+                        "?: " + newName + ";");
+
+                // 5. 其他可能的引用形式
+                processedContent = processedContent.replace(
+                        "<" + oldName + ">",
+                        "<" + newName + ">");
+            }
+
+            processedList.add(processedContent);
+        }
+
+        // 檢查是否還有未替換的引用
+        boolean hasUnresolvedReferences = false;
+        for (String content : processedList) {
+            for (String oldName : allRenameMap.keySet()) {
+                if (content.contains(": " + oldName + ";") ||
+                        content.contains(": " + oldName + "[") ||
+                        content.contains("?: " + oldName)) {
+                    System.out.println("警告：仍有未替換的引用 - " + oldName);
+                    hasUnresolvedReferences = true;
+                }
+            }
+        }
+
+        if (hasUnresolvedReferences) {
+            System.out.println("警告：最終清理後仍有未解決的引用");
+        } else {
+            System.out.println("最終清理完成，所有引用都已解決");
+        }
+
+        return processedList;
     }
 }
