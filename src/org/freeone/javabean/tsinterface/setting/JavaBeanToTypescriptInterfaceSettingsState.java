@@ -186,16 +186,16 @@ public final class JavaBeanToTypescriptInterfaceSettingsState
                 suffix.contains("Detail") || suffix.equals("Info");
     }
 
-    public boolean getUseAnnotationJsonProperty() {
+    public boolean isEnableDataToString() {
+        return enableDataToString;
+    }
+
+    public boolean isUseAnnotationJsonProperty() {
         return useAnnotationJsonProperty;
     }
 
     public void setUseAnnotationJsonProperty(boolean useAnnotationJsonProperty) {
         this.useAnnotationJsonProperty = useAnnotationJsonProperty;
-    }
-
-    public boolean getEnableDataToString() {
-        return enableDataToString;
     }
 
     public void setEnableDataToString(boolean enableDataToString) {
