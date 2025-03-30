@@ -3,6 +3,7 @@ package org.freeone.javabean.tsinterface.util;
 import com.intellij.psi.*;
 import com.intellij.psi.javadoc.PsiDocComment;
 import com.intellij.psi.javadoc.PsiDocTag;
+import org.apache.commons.lang3.StringUtils;
 
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -14,7 +15,7 @@ import java.util.regex.Pattern;
 public class TransactionCodeExtractor {
 
     // 匹配電文代號的模式，例如 RET-B-QRYSTATEMENTS 中的 QRYSTATEMENTS
-    private static final Pattern TRANSACTION_CODE_PATTERN = Pattern.compile("(?:RET-[A-Z]-)?([A-Z]+)");
+    private static final Pattern TRANSACTION_CODE_PATTERN = Pattern.compile("\\b[A-Z0-9]+-(?:[A-Z0-9-]+-)*([A-Z0-9]+)\\b");
 
     /**
      * 從控制器方法中提取電文代號
@@ -48,7 +49,7 @@ public class TransactionCodeExtractor {
 
         // 從描述文本中提取
         String commentText = docComment.getText();
-        if (commentText != null) {
+        if (StringUtils.isNotBlank(commentText)) {
             return extractFromText(commentText);
         }
 
@@ -97,7 +98,7 @@ public class TransactionCodeExtractor {
      * 從文本中提取電文代號
      */
     private static String extractFromText(String text) {
-        if (text == null || text.isEmpty()) {
+        if (StringUtils.isBlank(text)) {
             return null;
         }
 

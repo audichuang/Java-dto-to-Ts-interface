@@ -146,10 +146,6 @@ public class TypescriptContentGenerator {
             }
 
             stringBuilder.append("export ");
-            if (needDefault && classNameWithPackage.equalsIgnoreCase(qualifiedName)) {
-                // 移除默認導出，不再使用 default
-                // stringBuilder.append("default ");
-            }
             stringBuilder.append(content);
             String formattedContent = stringBuilder.toString();
 
