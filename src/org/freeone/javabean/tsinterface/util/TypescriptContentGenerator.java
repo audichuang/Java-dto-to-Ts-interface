@@ -184,7 +184,7 @@ public class TypescriptContentGenerator {
                     // 基於使用情境分類
                     if (usageInfo.isRequest) {
                         System.out.println("基於使用情境分析，" + simpleClassName + " 被分類為請求類");
-                        requestClasses.put(simpleClassName, formattedContent);
+                        requestDependencyClasses.put(simpleClassName, formattedContent);
                         classified = true;
                     } else {
                         System.out.println("基於使用情境分析，" + simpleClassName + " 被分類為響應類");
@@ -201,7 +201,7 @@ public class TypescriptContentGenerator {
                 if (simpleClassName.endsWith("Tranrq") || simpleClassName.endsWith("Req")
                         || simpleClassName.endsWith("Request")) {
                     System.out.println("基於名稱模式，" + simpleClassName + " 被分類為請求類");
-                    requestClasses.put(simpleClassName, formattedContent);
+                    requestDependencyClasses.put(simpleClassName, formattedContent);
                 } else if (simpleClassName.endsWith("Tranrs") || simpleClassName.endsWith("Rs")
                         || simpleClassName.endsWith("Response") || simpleClassName.endsWith("Resp")) {
                     System.out.println("基於名稱模式，" + simpleClassName + " 被分類為響應類");
@@ -258,12 +258,18 @@ public class TypescriptContentGenerator {
         // 應用重命名 - 更新所有類的內容以反映新的接口名
         applyRenamingToAllClasses(allClasses);
 
+        // ***** 新增：對請求類和響應類進行拓撲排序 *****
+        // 1. 對請求依賴類進行拓撲排序
+        sortByDependencies(requestDependencyClasses);
+        // 2. 對響應類及響應依賴類進行拓撲排序
+        sortByDependencies(responseClasses);
+
         // 添加排序後的類到結果列表
-        // 1. 請求類
+        // 1. 請求類 (主類)
         contentList.addAll(requestClasses.values());
-        // 2. 請求類依賴的類
+        // 2. 請求類依賴的類 (已經拓撲排序)
         contentList.addAll(requestDependencyClasses.values());
-        // 3. 響應類
+        // 3. 響應類 (已經拓撲排序)
         contentList.addAll(responseClasses.values());
         // 4. 其他類
         contentList.addAll(otherClasses.values());
@@ -299,6 +305,126 @@ public class TypescriptContentGenerator {
         }
 
         return String.join("\n", processedContentList); // 返回處理後的內容
+    }
+
+    /**
+     * 根據依賴關係對類別進行排序 (拓撲排序)
+     */
+    private static void sortByDependencies(Map<String, String> classes) {
+        if (classes.size() <= 1) {
+            return; // 只有一個類或無類，不需要排序
+        }
+
+        System.out.println("執行拓撲排序，共 " + classes.size() + " 個類");
+
+        // 分析類間依賴關係
+        Map<String, Set<String>> dependencyGraph = buildDependencyGraph(classes);
+
+        // 執行拓撲排序
+        List<String> sortedClassNames = topologicalSort(dependencyGraph);
+        System.out.println("拓撲排序結果: " + sortedClassNames);
+
+        // 根據排序結果重組映射
+        Map<String, String> sortedClasses = new LinkedHashMap<>();
+        for (String className : sortedClassNames) {
+            if (classes.containsKey(className)) {
+                sortedClasses.put(className, classes.get(className));
+            }
+        }
+
+        // 清空原映射並添加排序後的結果
+        classes.clear();
+        classes.putAll(sortedClasses);
+    }
+
+    /**
+     * 構建依賴關係圖
+     */
+    private static Map<String, Set<String>> buildDependencyGraph(Map<String, String> classes) {
+        Map<String, Set<String>> graph = new HashMap<>();
+
+        // 初始化圖
+        for (String className : classes.keySet()) {
+            graph.put(className, new HashSet<>());
+        }
+
+        // 分析每個類的內容，尋找依賴關係
+        for (Map.Entry<String, String> entry : classes.entrySet()) {
+            String className = entry.getKey();
+            String content = entry.getValue();
+
+            // 檢查這個類引用了哪些其他類
+            for (String otherClass : classes.keySet()) {
+                if (!className.equals(otherClass)) {
+                    // 檢查是否存在引用關係
+                    // 注意：這裡檢查介面名稱（可能已重命名）而不是原始類名
+                    String otherInterfaceName = extractInterfaceName(classes.get(otherClass));
+                    if (otherInterfaceName != null && (
+                            content.contains(": " + otherInterfaceName + ";") ||
+                                    content.contains(": " + otherInterfaceName + "[]") ||
+                                    content.contains("?: " + otherInterfaceName + ";") ||
+                                    content.contains("?: " + otherInterfaceName + "[]"))) {
+                        // 找到依賴，otherClass 被 className 依賴
+                        graph.get(className).add(otherClass);
+                        System.out.println("發現依賴關係: " + className + " -> " + otherClass);
+                    }
+                }
+            }
+        }
+
+        return graph;
+    }
+
+    /**
+     * 執行拓撲排序算法 (改進的DFS)
+     */
+    private static List<String> topologicalSort(Map<String, Set<String>> graph) {
+        List<String> result = new ArrayList<>();
+        Set<String> visited = new HashSet<>();
+        Set<String> inProcess = new HashSet<>();  // 用於檢測循環依賴
+
+        // 對每個未訪問的節點進行DFS
+        for (String node : graph.keySet()) {
+            if (!visited.contains(node)) {
+                dfs(node, graph, visited, inProcess, result);
+            }
+        }
+
+        // 由於DFS後序遍歷的特性，需要反轉結果
+        Collections.reverse(result);
+        return result;
+    }
+
+    /**
+     * DFS遞歸函數
+     */
+    private static void dfs(String node, Map<String, Set<String>> graph,
+                            Set<String> visited, Set<String> inProcess, List<String> result) {
+        // 如果節點已在處理中，表示有循環依賴，跳過
+        if (inProcess.contains(node)) {
+            System.out.println("警告: 發現循環依賴於 " + node);
+            return;
+        }
+
+        // 如果節點已訪問，跳過
+        if (visited.contains(node)) {
+            return;
+        }
+
+        // 標記為處理中
+        inProcess.add(node);
+
+        // 訪問所有依賴
+        for (String neighbor : graph.get(node)) {
+            dfs(neighbor, graph, visited, inProcess, result);
+        }
+
+        // 標記為已訪問並從處理中移除
+        inProcess.remove(node);
+        visited.add(node);
+
+        // 添加到結果
+        result.add(node);
     }
 
     /**
