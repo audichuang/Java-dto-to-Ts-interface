@@ -17,6 +17,7 @@ import com.intellij.psi.impl.source.PsiClassReferenceType;
 import com.intellij.psi.impl.source.tree.java.PsiAnnotationImpl;
 import com.intellij.psi.impl.source.tree.java.PsiNameValuePairImpl;
 import com.intellij.psi.search.GlobalSearchScope;
+import com.intellij.psi.util.InheritanceUtil;
 import org.freeone.javabean.tsinterface.setting.JavaBeanToTypescriptInterfaceProjectSettings;
 import org.freeone.javabean.tsinterface.setting.JavaBeanToTypescriptInterfaceSettingsState;
 
@@ -553,5 +554,52 @@ public class CommonUtils {
         }
 
         return null;
+    }
+
+    /**
+     * 判斷一個 PsiType 是否代表 java.util.Collection 或其子類
+     *
+     * @param type 要檢查的 PsiType
+     * @return 如果是 Collection 或其子類，返回 true，否則返回 false
+     */
+    public static boolean isCollectionType(PsiType type) {
+        if (type instanceof PsiClassType) {
+            PsiClassType classType = (PsiClassType) type;
+            PsiClass psiClass = classType.resolve();
+            return isCollectionClass(psiClass);
+        }
+        return false;
+    }
+
+    /**
+     * 判斷一個 PsiClass 是否是 java.util.Collection 或其子類
+     *
+     * @param psiClass 要檢查的 PsiClass
+     * @return 如果是 Collection 或其子類，返回 true，否則返回 false
+     */
+    public static boolean isCollectionClass(PsiClass psiClass) {
+        if (psiClass == null) {
+            return false;
+        }
+        // 使用 InheritanceUtil 檢查繼承關係，更可靠
+        // CommonClassNames.JAVA_UTIL_COLLECTION 就是 "java.util.Collection" 的常量
+        return InheritanceUtil.isInheritor(psiClass, true, CommonClassNames.JAVA_UTIL_COLLECTION);
+
+        /*
+         * // 或者，如果你不想依賴 InheritanceUtil，可以手動檢查 Qualified Name 和父類
+         * // 但 InheritanceUtil 更健壯
+         * String qualifiedName = psiClass.getQualifiedName();
+         * if (CommonClassNames.JAVA_UTIL_COLLECTION.equals(qualifiedName)) {
+         * return true;
+         * }
+         * // 遞迴檢查父接口和父類
+         * for (PsiClassType superType : psiClass.getSuperTypes()) {
+         * PsiClass superClass = superType.resolve();
+         * if (isCollectionClass(superClass)) { // 遞迴調用
+         * return true;
+         * }
+         * }
+         */
+        // return false;
     }
 }

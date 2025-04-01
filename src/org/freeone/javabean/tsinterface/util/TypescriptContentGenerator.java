@@ -708,42 +708,95 @@ public class TypescriptContentGenerator {
 
             if (fieldType instanceof PsiClassReferenceType) {
                 PsiClassReferenceType psiClassReferenceType = (PsiClassReferenceType) fieldType;
-                PsiType[] parameters = psiClassReferenceType.getParameters();
-                if (parameters.length != 0) {
-                    // 泛型
-                    for (PsiType parameter : parameters) {
-                        PsiClass parameterClass = CommonUtils.findPsiClass(project, parameter);
-                        createTypescriptContentForSinglePsiClass(project, parameterClass);
+                PsiClass resolvedClass = psiClassReferenceType.resolve();
+
+                // ******** 新增：檢查是否為 Collection *********
+                if (resolvedClass != null && CommonUtils.isCollectionClass(resolvedClass)) { // 假設 CommonUtils 有 isCollectionType 方法
+                    PsiType[] parameters = psiClassReferenceType.getParameters();
+                    if (parameters.length == 1) {
+                        // 獲取泛型參數類型
+                        PsiType genericType = parameters[0];
+                        // 遞迴獲取泛型參數的 TypeScript 類型字串
+                        // 注意：這裡傳遞 containingClass 可能需要考慮，取決於你的邏輯
+                        String genericTypeString = getTypeString(project, genericType, containingClass);
+                        // 組合 T[] 語法
+                        typeString = genericTypeString + "[]";
+
+                        // ******** 重要：也需要為泛型參數類型本身觸發生成 ********
+                        // 確保泛型參數類（如果它是自定義類）也被處理和記錄
+                        PsiClass genericPsiClass = CommonUtils.findPsiClass(project, genericType);
+                        createTypescriptContentForSinglePsiClass(project, genericPsiClass);
+                        // 收集可能的引用關係 (如果需要)
+                        if (containingClass != null && genericPsiClass != null && genericPsiClass.getQualifiedName() != null) {
+                            collectClassReference(containingClass.getQualifiedName(), genericPsiClass.getQualifiedName());
+                        }
+
+                    } else {
+                        // 沒有泛型參數或多個泛型參數的集合？通常是 List<T>，這裡 fallback 到 any[]
+                        typeString = "any[]";
                     }
-                    PsiClass resolvePsiClass = psiClassReferenceType.resolve();
-                    createTypescriptContentForSinglePsiClass(project, resolvePsiClass);
-                    // 类似 PageModel<Student>
-                    typeString = psiClassReferenceType.getPresentableText();
+                    // ******** 結束 Collection 處理 *********
+
+                } else { // 原本處理泛型類和普通類的邏輯
+                    PsiType[] parameters = psiClassReferenceType.getParameters();
+                    if (parameters.length != 0 && resolvedClass != null) {
+                        // 原本處理泛型（非集合）的邏輯，例如 MyGeneric<T, U>
+                        // 可能需要審視這裡是否也需要修改，但對於 List<T> 的問題，上面的 if 分支已處理
+                        // 確保泛型參數和解析出的類都被處理
+                        for (PsiType parameter : parameters) {
+                            PsiClass parameterClass = CommonUtils.findPsiClass(project, parameter);
+                            createTypescriptContentForSinglePsiClass(project, parameterClass);
+                        }
+                        createTypescriptContentForSinglePsiClass(project, resolvedClass);
+                        // 收集可能的引用關係 (如果需要)
+                        if (containingClass != null && resolvedClass.getQualifiedName() != null) {
+                            collectClassReference(containingClass.getQualifiedName(), resolvedClass.getQualifiedName());
+                        }
+                        // 這裡可能需要返回正確組合的泛型名稱，而非 presentableText
+                        // 例如，如果 MyGeneric 被重命名為 MyNewGeneric，且 T 是 String, U 是 MyType -> MyNewType
+                        // 應該返回 MyNewGeneric<string, MyNewType>
+                        // 這部分比較複雜，可能需要單獨處理
+                        // 暫時可能還是用 getPresentableText()，但後續的替換邏輯需要能處理這種情況
+                        typeString = psiClassReferenceType.getPresentableText(); // 或更精確的名稱組合
+
+
+                    } else {
+                        // 普通類
+                        PsiClass resolveClass = psiClassReferenceType.resolve();
+                        if (resolveClass != null && containingClass != null && resolveClass.getQualifiedName() != null) {
+                            // 收集類引用關係
+                            collectClassReference(containingClass.getQualifiedName(), resolveClass.getQualifiedName());
+                        }
+                        typeString = createTypescriptContentForSinglePsiClass(project, resolveClass);
+                    }
+                }
+
+            } else { // 其他 PsiType (例如 PsiArrayType, 雖然前面已處理，但以防萬一)
+                if (CommonUtils.isArrayType(fieldType)) { // 確保處理原生陣列
+                    PsiType componentType = ((PsiArrayType)fieldType).getComponentType();
+                    String componentTypeString = getTypeString(project, componentType, containingClass);
+                    typeString = componentTypeString + "[]";
+                    // 觸發組件類型生成
+                    PsiClass componentClass = CommonUtils.findPsiClass(project, componentType);
+                    createTypescriptContentForSinglePsiClass(project, componentClass);
+                    // 收集引用
+                    if (containingClass != null && componentClass != null && componentClass.getQualifiedName() != null) {
+                        collectClassReference(containingClass.getQualifiedName(), componentClass.getQualifiedName());
+                    }
+
                 } else {
-                    // 普通类
-                    PsiClass resolveClass = psiClassReferenceType.resolve();
-
-                    if (resolveClass != null && containingClass != null) {
+                    PsiClass filedClass = CommonUtils.findPsiClass(project, fieldType);
+                    if (filedClass != null && containingClass != null && filedClass.getQualifiedName() != null) {
                         // 收集類引用關係
-                        collectClassReference(containingClass.getQualifiedName(), resolveClass.getQualifiedName());
+                        collectClassReference(containingClass.getQualifiedName(), filedClass.getQualifiedName());
                     }
-
-                    typeString = createTypescriptContentForSinglePsiClass(project, resolveClass);
+                    typeString = createTypescriptContentForSinglePsiClass(project, filedClass);
                 }
-
-            } else {
-                PsiClass filedClass = CommonUtils.findPsiClass(project, fieldType);
-
-                if (filedClass != null && containingClass != null) {
-                    // 收集類引用關係
-                    collectClassReference(containingClass.getQualifiedName(), filedClass.getQualifiedName());
-                }
-
-                typeString = createTypescriptContentForSinglePsiClass(project, filedClass);
             }
-
         }
+        // 返回 typeString
         return typeString;
+
     }
 
     /**
