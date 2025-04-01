@@ -83,12 +83,13 @@ public class TypescriptContentGenerator {
         System.out.println("REFERENCED_BY 內容: " + REFERENCED_BY);
         List<String> contentList = new ArrayList<>();
         String qualifiedName = selectedClass.getQualifiedName();
+        Project project = selectedClass.getProject();
 
-        // 創建用於排序的列表，使用Map保存類名和內容
-        Map<String, String> requestClasses = new HashMap<>();
-        Map<String, String> requestDependencyClasses = new HashMap<>();
-        Map<String, String> responseClasses = new HashMap<>();
-        Map<String, String> otherClasses = new HashMap<>();
+        // 創建用於排序的列表，使用LinkedHashMap保存類名和內容以維持順序
+        Map<String, String> requestClasses = new LinkedHashMap<>();
+        Map<String, String> requestDependencyClasses = new LinkedHashMap<>();
+        Map<String, String> responseClasses = new LinkedHashMap<>();
+        Map<String, String> otherClasses = new LinkedHashMap<>();
 
         // 為了追蹤並重命名嵌套類，先收集主要類的信息
         Map<String, String> mainClassPrefixMap = new HashMap<>();
@@ -96,8 +97,16 @@ public class TypescriptContentGenerator {
         // 跳過的類名集合
         Set<String> skippedClassNames = new HashSet<>();
 
+        // 首先處理主類，確保它優先被分類
+        processPrimaryClass(selectedClass, project, requestClasses, responseClasses, mainClassPrefixMap, skippedClassNames);
+
         // 過濾並分類
         for (String classNameWithPackage : SUCCESS_CANONICAL_TEXT) {
+            // 跳過已處理的主類
+            if (classNameWithPackage.equals(qualifiedName)) {
+                continue;
+            }
+
             String content = CLASS_NAME_WITH_PACKAGE_2_CONTENT.get(classNameWithPackage);
             if (StringUtils.isBlank(content)) {
                 continue;
@@ -137,7 +146,7 @@ public class TypescriptContentGenerator {
             StringBuilder stringBuilder = new StringBuilder();
             // 添加註釋
             String psiClassCComment = CLASS_NAME_WITH_PACKAGE_2_TYPESCRIPT_COMMENT.get(classNameWithPackage);
-            if (psiClassCComment != null && psiClassCComment.trim().length() > 0) {
+            if (psiClassCComment != null && !psiClassCComment.trim().isEmpty()) {
                 if (psiClassCComment.endsWith("\n")) {
                     stringBuilder.append(psiClassCComment);
                 } else {
@@ -163,46 +172,74 @@ public class TypescriptContentGenerator {
                 }
             }
 
-            // 根據類名對內容進行分類
-            if (simpleClassName.endsWith("Tranrq") || simpleClassName.endsWith("Req")
-                    || simpleClassName.endsWith("Request")) {
-                requestClasses.put(simpleClassName, formattedContent);
-            } else if (simpleClassName.endsWith("Tranrs") || simpleClassName.endsWith("Rs")
-                    || simpleClassName.endsWith("Response")) {
-                responseClasses.put(simpleClassName, formattedContent);
-            } else {
-                // 檢查是否為請求類的依賴類
-                boolean isDependency = false;
-                for (String reqClassName : requestClasses.keySet()) {
-                    // 檢查請求類內容中是否使用了這個類
-                    String reqClassContent = requestClasses.get(reqClassName);
-                    // 檢查請求類中是否包含該類的引用, 如通過名稱檢查可能的使用
-                    if (reqClassName.contains(simpleClassName) ||
-                            content.contains(simpleClassName) ||
-                            reqClassContent.contains(simpleClassName)) {
-                        requestDependencyClasses.put(simpleClassName, formattedContent);
-                        isDependency = true;
-                        break;
+            // 嘗試基於使用情境分類
+            boolean classified = false;
+            try {
+                PsiClass psiClass = CommonUtils.findPsiClass(project, CommonUtils.findPsiType(project, classNameWithPackage));
+
+                if (psiClass != null) {
+                    // 分析類的使用情境
+                    ClassUsageInfo usageInfo = analyzeClassUsage(project, psiClass);
+
+                    // 基於使用情境分類
+                    if (usageInfo.isRequest) {
+                        System.out.println("基於使用情境分析，" + simpleClassName + " 被分類為請求類");
+                        requestClasses.put(simpleClassName, formattedContent);
+                        classified = true;
+                    } else {
+                        System.out.println("基於使用情境分析，" + simpleClassName + " 被分類為響應類");
+                        responseClasses.put(simpleClassName, formattedContent);
+                        classified = true;
                     }
                 }
+            } catch (Exception e) {
+                System.out.println("分析 " + simpleClassName + " 的使用情境時出錯: " + e.getMessage());
+            }
 
-                if (!isDependency) {
-                    // 檢查是否為響應類的依賴類
-                    for (String resClassName : responseClasses.keySet()) {
-                        String resClassContent = responseClasses.get(resClassName);
-                        if (resClassName.contains(simpleClassName) ||
+            // 如果基於使用情境的分類失敗，回退到基於名稱的分類
+            if (!classified) {
+                if (simpleClassName.endsWith("Tranrq") || simpleClassName.endsWith("Req")
+                        || simpleClassName.endsWith("Request")) {
+                    System.out.println("基於名稱模式，" + simpleClassName + " 被分類為請求類");
+                    requestClasses.put(simpleClassName, formattedContent);
+                } else if (simpleClassName.endsWith("Tranrs") || simpleClassName.endsWith("Rs")
+                        || simpleClassName.endsWith("Response") || simpleClassName.endsWith("Resp")) {
+                    System.out.println("基於名稱模式，" + simpleClassName + " 被分類為響應類");
+                    responseClasses.put(simpleClassName, formattedContent);
+                } else {
+                    // 檢查是否為請求類的依賴類
+                    boolean isDependency = false;
+                    for (String reqClassName : requestClasses.keySet()) {
+                        // 檢查請求類內容中是否使用了這個類
+                        String reqClassContent = requestClasses.get(reqClassName);
+                        // 檢查請求類中是否包含該類的引用, 如通過名稱檢查可能的使用
+                        if (reqClassName.contains(simpleClassName) ||
                                 content.contains(simpleClassName) ||
-                                resClassContent.contains(simpleClassName)) {
-                            // 如果是響應類依賴，也放到響應類中
-                            responseClasses.put(simpleClassName, formattedContent);
+                                reqClassContent.contains(simpleClassName)) {
+                            requestDependencyClasses.put(simpleClassName, formattedContent);
                             isDependency = true;
                             break;
                         }
                     }
 
-                    // 如果不是任何類的依賴，則放到其他類中
                     if (!isDependency) {
-                        otherClasses.put(simpleClassName, formattedContent);
+                        // 檢查是否為響應類的依賴類
+                        for (String resClassName : responseClasses.keySet()) {
+                            String resClassContent = responseClasses.get(resClassName);
+                            if (resClassName.contains(simpleClassName) ||
+                                    content.contains(simpleClassName) ||
+                                    resClassContent.contains(simpleClassName)) {
+                                // 如果是響應類依賴，也放到響應類中
+                                responseClasses.put(simpleClassName, formattedContent);
+                                isDependency = true;
+                                break;
+                            }
+                        }
+
+                        // 如果不是任何類的依賴，則放到其他類中
+                        if (!isDependency) {
+                            otherClasses.put(simpleClassName, formattedContent);
+                        }
                     }
                 }
             }
@@ -262,8 +299,98 @@ public class TypescriptContentGenerator {
         }
 
         return String.join("\n", processedContentList); // 返回處理後的內容
-
     }
+
+    /**
+     * 處理主類，確保它優先被分類
+     */
+    private static void processPrimaryClass(PsiClass selectedClass, Project project,
+                                            Map<String, String> requestClasses,
+                                            Map<String, String> responseClasses,
+                                            Map<String, String> mainClassPrefixMap,
+                                            Set<String> skippedClassNames) {
+        if (selectedClass == null) {
+            return;
+        }
+
+        String qualifiedName = selectedClass.getQualifiedName();
+        if (qualifiedName == null) {
+            return;
+        }
+
+        String content = CLASS_NAME_WITH_PACKAGE_2_CONTENT.get(qualifiedName);
+        if (StringUtils.isBlank(content)) {
+            return;
+        }
+
+        String simpleClassName = selectedClass.getName();
+        if (simpleClassName == null) {
+            return;
+        }
+
+        // 也為主類進行MwHeader和Template的檢查
+        // 始終過濾MwHeader和常見的頭部類
+        if (simpleClassName.equals("MwHeader") ||
+                simpleClassName.contains("Header")) {
+            System.out.println("主類是頭部類，跳過: " + simpleClassName);
+            skippedClassNames.add(simpleClassName);
+            return;
+        }
+
+        // 檢查是否為容器類，如果設置為僅處理泛型DTO，則跳過容器類
+        if (CommonUtils.getSettings().isOnlyProcessGenericDto() &&
+                (simpleClassName.contains("Template") ||
+                        simpleClassName.contains("Wrapper") ||
+                        simpleClassName.equals("ResponseEntity") ||
+                        simpleClassName.contains("Response") && content.contains("<") && content.contains(">") ||
+                        simpleClassName.contains("Request") && content.contains("<") && content.contains(">"))) {
+            System.out.println("主類是容器類，跳過: " + simpleClassName);
+            skippedClassNames.add(simpleClassName);
+            return;
+        }
+
+        StringBuilder stringBuilder = new StringBuilder();
+        // 添加註釋
+        String psiClassCComment = CLASS_NAME_WITH_PACKAGE_2_TYPESCRIPT_COMMENT.get(qualifiedName);
+        if (psiClassCComment != null && !psiClassCComment.trim().isEmpty()) {
+            if (psiClassCComment.endsWith("\n")) {
+                stringBuilder.append(psiClassCComment);
+            } else {
+                stringBuilder.append(psiClassCComment).append("\n");
+            }
+        }
+
+        stringBuilder.append("export ");
+        stringBuilder.append(content);
+        String formattedContent = stringBuilder.toString();
+
+        // 檢查並收集主要類的前綴信息
+        if (formattedContent.contains("interface ")) {
+            String interfaceName = extractInterfaceName(formattedContent);
+            if (interfaceName != null && (interfaceName.contains("Req") || interfaceName.contains("Resp"))) {
+                int suffixIndex = Math.max(
+                        interfaceName.indexOf("Req"),
+                        interfaceName.indexOf("Resp"));
+                if (suffixIndex > 0) {
+                    String transactionCodePrefix = interfaceName.substring(0, suffixIndex);
+                    mainClassPrefixMap.put(simpleClassName, transactionCodePrefix);
+                }
+            }
+        }
+
+        // 使用ClassUsageInfo分析主類的角色
+        ClassUsageInfo usageInfo = analyzeClassUsage(project, selectedClass);
+
+        if (usageInfo.isRequest) {
+            System.out.println("主類 " + simpleClassName + " 被分類為請求類");
+            requestClasses.put(simpleClassName, formattedContent);
+        } else {
+            System.out.println("主類 " + simpleClassName + " 被分類為響應類");
+            responseClasses.put(simpleClassName, formattedContent);
+        }
+    }
+
+
 
     // 從接口內容中提取接口名稱
     private static String extractInterfaceName(String content) {

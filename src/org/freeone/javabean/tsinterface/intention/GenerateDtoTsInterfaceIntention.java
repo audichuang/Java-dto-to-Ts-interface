@@ -209,17 +209,17 @@ public class GenerateDtoTsInterfaceIntention extends PsiElementBaseIntentionActi
         return ReadAction.compute(() -> {
             List<PsiClass> dtoClasses = new ArrayList<>();
 
-            // 檢查返回類型
-            PsiType returnType = method.getReturnType();
-            if (returnType != null) {
-                addDtoClassesFromType(returnType, dtoClasses);
-            }
-
             // 檢查參數類型
             PsiParameter[] parameters = method.getParameterList().getParameters();
             for (PsiParameter parameter : parameters) {
                 PsiType parameterType = parameter.getType();
                 addDtoClassesFromType(parameterType, dtoClasses);
+            }
+
+            // 檢查返回類型
+            PsiType returnType = method.getReturnType();
+            if (returnType != null) {
+                addDtoClassesFromType(returnType, dtoClasses);
             }
 
             return dtoClasses;
