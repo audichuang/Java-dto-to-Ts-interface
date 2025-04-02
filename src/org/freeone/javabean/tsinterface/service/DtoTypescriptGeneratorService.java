@@ -1,31 +1,22 @@
 package org.freeone.javabean.tsinterface.service;
 
-import com.intellij.notification.*;
+import com.intellij.notification.Notification;
+import com.intellij.notification.NotificationGroup;
+import com.intellij.notification.NotificationGroupManager;
+import com.intellij.notification.NotificationType;
 import com.intellij.openapi.application.ApplicationManager;
-import com.intellij.openapi.application.ModalityState;
 import com.intellij.openapi.application.ReadAction;
 import com.intellij.openapi.fileChooser.FileChooser;
 import com.intellij.openapi.fileChooser.FileChooserDescriptor;
 import com.intellij.openapi.project.Project;
-import com.intellij.openapi.editor.Document;
-import com.intellij.openapi.editor.Editor;
 import com.intellij.openapi.ui.Messages;
 import com.intellij.openapi.vfs.VirtualFile;
-import com.intellij.psi.PsiClass;
-import com.intellij.psi.PsiField;
-import com.intellij.psi.PsiMethod;
-import com.intellij.psi.PsiModifier;
-import com.intellij.psi.PsiParameter;
-import com.intellij.psi.PsiType;
-import com.intellij.psi.PsiClassType;
+import com.intellij.psi.*;
 import org.freeone.javabean.tsinterface.setting.JavaBeanToTypescriptInterfaceProjectSettings;
-import org.freeone.javabean.tsinterface.setting.JavaBeanToTypescriptInterfaceSettingsState;
 import org.freeone.javabean.tsinterface.swing.TypescriptInterfaceShowerWrapper;
 import org.freeone.javabean.tsinterface.util.CommonUtils;
 import org.freeone.javabean.tsinterface.util.TypescriptContentGenerator;
-import org.freeone.javabean.tsinterface.util.TypescriptUtils;
 
-import javax.swing.*;
 import java.awt.*;
 import java.awt.datatransfer.Clipboard;
 import java.awt.datatransfer.StringSelection;
@@ -65,14 +56,13 @@ public class DtoTypescriptGeneratorService {
         Map<String, String> contentMap = new HashMap<>();
         for (PsiClass psiClass : dtoClasses) {
             try {
-                TypescriptContentGenerator.processPsiClass(project, psiClass, saveToFile);
-                String content = TypescriptContentGenerator.mergeContent(psiClass, saveToFile);
+                // 創建 TypescriptContentGenerator 實例
+                TypescriptContentGenerator generator = new TypescriptContentGenerator(project);
+                generator.processPsiClass(psiClass, saveToFile);
+                String content = generator.mergeContent(psiClass, saveToFile);
                 contentMap.put(psiClass.getName(), content);
             } catch (Exception e) {
                 e.printStackTrace();
-            } finally {
-                // 清理缓存
-                TypescriptContentGenerator.clearCache();
             }
         }
 
@@ -102,14 +92,13 @@ public class DtoTypescriptGeneratorService {
         Map<String, String> contentMap = new HashMap<>();
         for (PsiClass psiClass : dtoClasses) {
             try {
-                TypescriptContentGenerator.processPsiClass(project, psiClass, false);
-                String content = TypescriptContentGenerator.mergeContent(psiClass, false);
+                // 創建 TypescriptContentGenerator 實例
+                TypescriptContentGenerator generator = new TypescriptContentGenerator(project);
+                generator.processPsiClass(psiClass, false);
+                String content = generator.mergeContent(psiClass, false);
                 contentMap.put(psiClass.getName(), content);
             } catch (Exception e) {
                 e.printStackTrace();
-            } finally {
-                // 清理缓存
-                TypescriptContentGenerator.clearCache();
             }
         }
 
@@ -119,7 +108,7 @@ public class DtoTypescriptGeneratorService {
         }
 
         // 顯示選項對話框
-        String[] options = { "保存到文件", "複製到剪貼板", "在文本框中編輯" };
+        String[] options = {"保存到文件", "複製到剪貼板", "在文本框中編輯"};
         int choice = Messages.showDialog(project, "請選擇操作", "TypeScript 接口生成", options, 0, Messages.getQuestionIcon());
 
         if (choice == 0) {

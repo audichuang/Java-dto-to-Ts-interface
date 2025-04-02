@@ -58,7 +58,7 @@ public class JavaBeanToTypescriptInterfaceAction extends AnAction {
 
     /**
      * 執行 Action 的主要方法，當用戶點擊菜單項時調用
-     * 
+     *
      * @param e 動作事件，包含上下文信息
      */
     @Override
@@ -122,7 +122,7 @@ public class JavaBeanToTypescriptInterfaceAction extends AnAction {
 
     /**
      * 處理編輯器中選中的 PSI 元素
-     * 
+     *
      * @param psiElement 當前選中的 PSI 元素
      * @param file       當前文件
      * @return 經過處理的 PSI 元素
@@ -158,7 +158,7 @@ public class JavaBeanToTypescriptInterfaceAction extends AnAction {
 
     /**
      * 處理版本 2.0 的轉換邏輯
-     * 
+     *
      * @param e              動作事件
      * @param project        當前項目
      * @param needSaveToFile 是否需要保存文件
@@ -171,16 +171,17 @@ public class JavaBeanToTypescriptInterfaceAction extends AnAction {
         }
         if (psiElement instanceof PsiClass) {
             PsiClass psiClass = (PsiClass) psiElement;
-            TypescriptContentGenerator.processPsiClass(project, psiClass, needSaveToFile);
-            String content = TypescriptContentGenerator.mergeContent(psiClass, needSaveToFile);
-            TypescriptContentGenerator.clearCache();
+            // 創建 TypescriptContentGenerator 實例
+            TypescriptContentGenerator generator = new TypescriptContentGenerator(project);
+            generator.processPsiClass(psiClass, needSaveToFile);
+            String content = generator.mergeContent(psiClass, needSaveToFile);
             generateTypescriptContent(e, project, needSaveToFile, psiClass.getName(), content);
         }
     }
 
     /**
      * 處理版本 1.0 的轉換邏輯
-     * 
+     *
      * @param e              動作事件
      * @param project        當前項目
      * @param needSaveToFile 是否需要保存文件
@@ -188,7 +189,7 @@ public class JavaBeanToTypescriptInterfaceAction extends AnAction {
      * @param psiElement     當前選中的 PSI 元素
      */
     private void processVersion1(AnActionEvent e, Project project, boolean needSaveToFile, PsiFile file,
-            PsiElement psiElement) {
+                                 PsiElement psiElement) {
         if (file instanceof PsiJavaFile) {
             PsiJavaFile psiJavaFile = (PsiJavaFile) file;
             if (psiElement instanceof PsiClass) {
@@ -199,9 +200,10 @@ public class JavaBeanToTypescriptInterfaceAction extends AnAction {
                     boolean b = sampleDialogWrapper.showAndGet();
                     if (b) {
                         // 只有內部 public static class 會執行這一步
-                        TypescriptContentGenerator.processPsiClass(project, psiClass, needSaveToFile);
-                        String content = TypescriptContentGenerator.mergeContent(psiClass, needSaveToFile);
-                        TypescriptContentGenerator.clearCache();
+                        // 創建 TypescriptContentGenerator 實例
+                        TypescriptContentGenerator generator = new TypescriptContentGenerator(project);
+                        generator.processPsiClass(psiClass, needSaveToFile);
+                        String content = generator.mergeContent(psiClass, needSaveToFile);
                         generateTypescriptContent(e, project, needSaveToFile, psiClass.getName(),
                                 content);
                         return;
@@ -214,9 +216,10 @@ public class JavaBeanToTypescriptInterfaceAction extends AnAction {
             PsiClass[] classes = psiJavaFile.getClasses();
             if (classes.length > 0) {
                 PsiClass mainClass = classes[0];
-                TypescriptContentGenerator.processPsiClass(project, mainClass, needSaveToFile);
-                String content = TypescriptContentGenerator.mergeContent(mainClass, needSaveToFile);
-                TypescriptContentGenerator.clearCache();
+                // 創建 TypescriptContentGenerator 實例
+                TypescriptContentGenerator generator = new TypescriptContentGenerator(project);
+                generator.processPsiClass(mainClass, needSaveToFile);
+                String content = generator.mergeContent(mainClass, needSaveToFile);
                 generateTypescriptContent(e, project, needSaveToFile,
                         psiJavaFile.getVirtualFile().getNameWithoutExtension(), content);
             } else {
@@ -236,7 +239,7 @@ public class JavaBeanToTypescriptInterfaceAction extends AnAction {
      * @param interfaceContent 接口內容
      */
     private void generateTypescriptContent(AnActionEvent e, Project project, boolean saveToFile, String fileNameToSave,
-            String interfaceContent) {
+                                           String interfaceContent) {
         if (saveToFile) {
             handleSaveToFile(project, fileNameToSave, interfaceContent);
         } else {
@@ -246,7 +249,7 @@ public class JavaBeanToTypescriptInterfaceAction extends AnAction {
 
     /**
      * 處理保存文件操作
-     * 
+     *
      * @param project          當前項目
      * @param fileNameToSave   要保存的文件名
      * @param interfaceContent 接口內容
@@ -263,7 +266,7 @@ public class JavaBeanToTypescriptInterfaceAction extends AnAction {
                 bufferedWriter.write(interfaceContent);
                 // 使用新的 Notification Builder API
                 notificationGroup.createNotification(
-                        "The target file was saved to:  " + interfaceFileSavePath, NotificationType.INFORMATION)
+                                "The target file was saved to:  " + interfaceFileSavePath, NotificationType.INFORMATION)
                         .setImportant(true)
                         .notify(project);
             } catch (IOException ioException) {
@@ -274,7 +277,7 @@ public class JavaBeanToTypescriptInterfaceAction extends AnAction {
 
     /**
      * 處理複製到剪貼板或顯示在文本框中的操作
-     * 
+     *
      * @param e                動作事件
      * @param project          當前項目
      * @param fileNameToSave   文件名
@@ -329,7 +332,7 @@ public class JavaBeanToTypescriptInterfaceAction extends AnAction {
 
     /**
      * 顯示選項對話框
-     * 
+     *
      * @param event      動作事件
      * @param psiClasses PSI類列表
      * @param title      對話框標題
@@ -371,7 +374,7 @@ public class JavaBeanToTypescriptInterfaceAction extends AnAction {
 
     /**
      * 處理選中的類，生成 TypeScript 接口並顯示在編輯器中
-     * 
+     *
      * @param project    當前項目
      * @param psiClasses PSI類列表
      */
@@ -382,14 +385,13 @@ public class JavaBeanToTypescriptInterfaceAction extends AnAction {
 
             for (PsiClass psiClass : psiClasses) {
                 try {
-                    TypescriptContentGenerator.processPsiClass(project, psiClass, false);
-                    String content = TypescriptContentGenerator.mergeContent(psiClass, false);
+                    // 創建 TypescriptContentGenerator 實例
+                    TypescriptContentGenerator generator = new TypescriptContentGenerator(project);
+                    generator.processPsiClass(psiClass, false);
+                    String content = generator.mergeContent(psiClass, false);
                     contentMap.put(psiClass.getName(), content);
                 } catch (Exception e) {
                     log.error("處理類 {} 時發生錯誤", psiClass.getName(), e);
-                } finally {
-                    // 清理緩存
-                    TypescriptContentGenerator.clearCache();
                 }
             }
 
@@ -421,7 +423,7 @@ public class JavaBeanToTypescriptInterfaceAction extends AnAction {
 
     /**
      * 判斷是否為DTO類
-     * 
+     *
      * @param psiClass 需要判斷的PSI類
      * @return 是否為DTO類
      */
@@ -488,7 +490,7 @@ public class JavaBeanToTypescriptInterfaceAction extends AnAction {
 
     /**
      * 根據類結構判斷是否為DTO類
-     * 
+     *
      * @param psiClass 需要判斷的PSI類
      * @return 是否為DTO類
      */

@@ -70,10 +70,12 @@ public class GenerateDtoTsInterfaceIntention extends PsiElementBaseIntentionActi
             Map<String, String> contentMap = new HashMap<>();
             for (PsiClass psiClass : dtoClasses) {
                 try {
-                    TypescriptContentGenerator.processPsiClass(project, psiClass, false);
-                    String content = TypescriptContentGenerator.mergeContent(psiClass, false);
+                    // 創建 TypescriptContentGenerator 實例
+                    TypescriptContentGenerator generator = new TypescriptContentGenerator(project);
+                    generator.processPsiClass(psiClass, false);
+                    String content = generator.mergeContent(psiClass, false);
                     contentMap.put(psiClass.getName(), content);
-                    TypescriptContentGenerator.clearCache();
+                    // 不再需要 clearCache 調用，因為每個實例都有自己的狀態
                 } catch (Exception e) {
                     e.printStackTrace();
                 }
