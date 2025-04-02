@@ -1,18 +1,13 @@
 package org.freeone.javabean.tsinterface.setting;
 
+import com.intellij.ui.IdeBorderFactory;
+import com.intellij.ui.ToolbarDecorator;
 import com.intellij.ui.components.JBCheckBox;
 import com.intellij.ui.components.JBLabel;
-import com.intellij.ui.components.JBScrollPane;
 import com.intellij.ui.components.JBTextField;
-import com.intellij.ui.table.JBTable;
-import com.intellij.util.ui.FormBuilder;
-import com.intellij.util.ui.JBUI;
 import com.intellij.ui.components.panels.VerticalLayout;
-import com.intellij.ui.IdeBorderFactory;
-import com.intellij.ui.CollectionListModel;
-import com.intellij.ui.ToolbarDecorator;
-import com.intellij.ui.ListCellRendererWrapper;
-import org.jetbrains.annotations.NotNull;
+import com.intellij.ui.table.JBTable;
+import com.intellij.util.ui.JBUI;
 
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
@@ -40,7 +35,7 @@ public class JavaBeanToTypescriptInterfaceSettingsComponent {
 
     // DTO 後綴設定區塊
     private final JPanel dtoSuffixesPanel;
-    private final DefaultTableModel dtoSuffixTableModel = new DefaultTableModel(new String[] { "DTO 後綴" }, 0) {
+    private final DefaultTableModel dtoSuffixTableModel = new DefaultTableModel(new String[]{"DTO 後綴"}, 0) {
         @Override
         public boolean isCellEditable(int row, int column) {
             return true; // 允許直接編輯表格單元格
@@ -136,7 +131,7 @@ public class JavaBeanToTypescriptInterfaceSettingsComponent {
                 .setAddAction(button -> {
                     String suffix = newSuffixField.getText().trim();
                     if (!suffix.isEmpty() && !containsSuffix(suffix)) {
-                        dtoSuffixTableModel.addRow(new Object[] { suffix });
+                        dtoSuffixTableModel.addRow(new Object[]{suffix});
                         newSuffixField.setText("");
                     }
                 })
@@ -190,24 +185,49 @@ public class JavaBeanToTypescriptInterfaceSettingsComponent {
         return ignoreParentField.isSelected();
     }
 
+    // 設置界面值
+    public void setIgnoreParentField(boolean value) {
+        ignoreParentField.setSelected(value);
+    }
+
     public boolean getEnableDataToString() {
         return enableDataToString.isSelected();
+    }
+
+    public void setEnableDataToString(boolean value) {
+        enableDataToString.setSelected(value);
     }
 
     public boolean getUseAnnotationJsonProperty() {
         return useAnnotationJsonProperty.isSelected();
     }
 
+    public void setUseAnnotationJsonProperty(boolean value) {
+        useAnnotationJsonProperty.setSelected(value);
+    }
+
     public boolean getAllowFindClassInAllScope() {
         return allowFindClassInAllScope.isSelected();
+    }
+
+    public void setAllowFindClassInAllScope(boolean value) {
+        allowFindClassInAllScope.setSelected(value);
     }
 
     public boolean getAddOptionalMarkToAllFields() {
         return addOptionalMarkToAllFields.isSelected();
     }
 
+    public void setAddOptionalMarkToAllFields(boolean value) {
+        addOptionalMarkToAllFields.setSelected(value);
+    }
+
     public boolean getIgnoreSerialVersionUID() {
         return ignoreSerialVersionUID.isSelected();
+    }
+
+    public void setIgnoreSerialVersionUID(boolean value) {
+        ignoreSerialVersionUID.setSelected(value);
     }
 
     public List<String> getCustomDtoSuffixes() {
@@ -221,31 +241,6 @@ public class JavaBeanToTypescriptInterfaceSettingsComponent {
         return suffixes;
     }
 
-    // 設置界面值
-    public void setIgnoreParentField(boolean value) {
-        ignoreParentField.setSelected(value);
-    }
-
-    public void setEnableDataToString(boolean value) {
-        enableDataToString.setSelected(value);
-    }
-
-    public void setUseAnnotationJsonProperty(boolean value) {
-        useAnnotationJsonProperty.setSelected(value);
-    }
-
-    public void setAllowFindClassInAllScope(boolean value) {
-        allowFindClassInAllScope.setSelected(value);
-    }
-
-    public void setAddOptionalMarkToAllFields(boolean value) {
-        addOptionalMarkToAllFields.setSelected(value);
-    }
-
-    public void setIgnoreSerialVersionUID(boolean value) {
-        ignoreSerialVersionUID.setSelected(value);
-    }
-
     public void setCustomDtoSuffixes(List<String> suffixes) {
         // 清空表格
         while (dtoSuffixTableModel.getRowCount() > 0) {
@@ -255,21 +250,13 @@ public class JavaBeanToTypescriptInterfaceSettingsComponent {
         // 添加新數據
         for (String suffix : suffixes) {
             if (suffix != null && !suffix.isEmpty()) {
-                dtoSuffixTableModel.addRow(new Object[] { suffix });
+                dtoSuffixTableModel.addRow(new Object[]{suffix});
             }
         }
     }
 
     public boolean isUseTransactionCodePrefix() {
         return useTransactionCodePrefixCheckBox.isSelected();
-    }
-
-    public String getRequestSuffix() {
-        return requestSuffixField.getText();
-    }
-
-    public String getResponseSuffix() {
-        return responseSuffixField.getText();
     }
 
     public void setUseTransactionCodePrefix(boolean selected) {
@@ -281,8 +268,16 @@ public class JavaBeanToTypescriptInterfaceSettingsComponent {
         }
     }
 
+    public String getRequestSuffix() {
+        return requestSuffixField.getText();
+    }
+
     public void setRequestSuffix(String suffix) {
         requestSuffixField.setText(suffix);
+    }
+
+    public String getResponseSuffix() {
+        return responseSuffixField.getText();
     }
 
     public void setResponseSuffix(String suffix) {

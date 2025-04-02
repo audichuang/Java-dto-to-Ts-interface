@@ -293,7 +293,7 @@ public class JavaBeanToTypescriptInterfaceComponent {
     }
 
     private JPanel createSuffixListPanel(String type, List<String> defaultSuffixes,
-            String... placeHolderExamples) {
+                                         String... placeHolderExamples) {
         JPanel panel = new JPanel(new BorderLayout(5, 5));
         panel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
 
@@ -430,6 +430,11 @@ public class JavaBeanToTypescriptInterfaceComponent {
         return defaultSuffixes;
     }
 
+    // 設置請求 DTO 後綴列表（不再需要，但保留方法避免錯誤）
+    public void setRequestDtoSuffixes(List<String> suffixes) {
+        // 由於移除了設定界面，此方法不再需要實現
+    }
+
     // 獲取響應 DTO 後綴列表（使用默認值）
     public List<String> getResponseDtoSuffixes() {
         List<String> defaultSuffixes = new ArrayList<>();
@@ -442,6 +447,11 @@ public class JavaBeanToTypescriptInterfaceComponent {
         defaultSuffixes.add("Detail");
         defaultSuffixes.add("Info");
         return defaultSuffixes;
+    }
+
+    // 設置響應 DTO 後綴列表（不再需要，但保留方法避免錯誤）
+    public void setResponseDtoSuffixes(List<String> suffixes) {
+        // 由於移除了設定界面，此方法不再需要實現
     }
 
     // 為了兼容現有代碼，保留這個方法，但實際上會根據後綴進行分類
@@ -477,14 +487,6 @@ public class JavaBeanToTypescriptInterfaceComponent {
         return useTransactionCodePrefixCheckBox.isSelected();
     }
 
-    public String getRequestSuffix() {
-        return requestSuffixField.getText();
-    }
-
-    public String getResponseSuffix() {
-        return responseSuffixField.getText();
-    }
-
     public void setUseTransactionCodePrefix(boolean selected) {
         useTransactionCodePrefixCheckBox.setSelected(selected);
         // 確保UI狀態更新
@@ -496,22 +498,20 @@ public class JavaBeanToTypescriptInterfaceComponent {
         }
     }
 
+    public String getRequestSuffix() {
+        return requestSuffixField.getText();
+    }
+
     public void setRequestSuffix(String suffix) {
         requestSuffixField.setText(suffix);
     }
 
+    public String getResponseSuffix() {
+        return responseSuffixField.getText();
+    }
+
     public void setResponseSuffix(String suffix) {
         responseSuffixField.setText(suffix);
-    }
-
-    // 設置請求 DTO 後綴列表（不再需要，但保留方法避免錯誤）
-    public void setRequestDtoSuffixes(List<String> suffixes) {
-        // 由於移除了設定界面，此方法不再需要實現
-    }
-
-    // 設置響應 DTO 後綴列表（不再需要，但保留方法避免錯誤）
-    public void setResponseDtoSuffixes(List<String> suffixes) {
-        // 由於移除了設定界面，此方法不再需要實現
     }
 
     // 獲取主面板
@@ -524,45 +524,45 @@ public class JavaBeanToTypescriptInterfaceComponent {
         return dateToStringCheckBox.isSelected();
     }
 
-    public boolean isUseAnnotationJsonProperty() {
-        return useJsonPropertyCheckBox.isSelected();
-    }
-
-    public boolean isAllowFindClassInAllScope() {
-        return allowFindClassInAllScope.isSelected();
-    }
-
-    public boolean isIgnoreParentField() {
-        return ignoreParentField.isSelected();
-    }
-
-    public boolean isAddOptionalMarkToAllFields() {
-        return addOptionalMarkToAllFields.isSelected();
-    }
-
-    public boolean isIgnoreSerialVersionUID() {
-        return ignoreSerialVersionUID.isSelected();
-    }
-
     // 设置复选框状态的方法
     public void setDateToString(boolean selected) {
         dateToStringCheckBox.setSelected(selected);
+    }
+
+    public boolean isUseAnnotationJsonProperty() {
+        return useJsonPropertyCheckBox.isSelected();
     }
 
     public void setUseAnnotationJsonProperty(boolean selected) {
         useJsonPropertyCheckBox.setSelected(selected);
     }
 
+    public boolean isAllowFindClassInAllScope() {
+        return allowFindClassInAllScope.isSelected();
+    }
+
     public void setAllowFindClassInAllScope(boolean selected) {
         allowFindClassInAllScope.setSelected(selected);
+    }
+
+    public boolean isIgnoreParentField() {
+        return ignoreParentField.isSelected();
     }
 
     public void setIgnoreParentField(boolean selected) {
         ignoreParentField.setSelected(selected);
     }
 
+    public boolean isAddOptionalMarkToAllFields() {
+        return addOptionalMarkToAllFields.isSelected();
+    }
+
     public void setAddOptionalMarkToAllFields(boolean selected) {
         addOptionalMarkToAllFields.setSelected(selected);
+    }
+
+    public boolean isIgnoreSerialVersionUID() {
+        return ignoreSerialVersionUID.isSelected();
     }
 
     public void setIgnoreSerialVersionUID(boolean selected) {

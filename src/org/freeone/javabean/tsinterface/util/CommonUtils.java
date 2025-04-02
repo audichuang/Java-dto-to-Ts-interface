@@ -24,7 +24,10 @@ import org.freeone.javabean.tsinterface.setting.JavaBeanToTypescriptInterfaceSet
 import java.io.File;
 import java.util.Arrays;
 import java.util.List;
-import java.util.concurrent.*;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 public class CommonUtils {
@@ -33,12 +36,14 @@ public class CommonUtils {
 
     public static final List<String> requireAnnotationShortNameList = Arrays.asList("NotNull", "NotEmpty", "NotBlank");
     private static ExecutorService cachedThreadPool;
+    // 統一的 Disposable 實例，確保資源正確釋放
+    private static Disposable disposable;
 
     public static boolean isNumberType(PsiType psiType) {
         return numberTypes.contains(psiType.getCanonicalText())
                 || "java.lang.Number".equalsIgnoreCase(psiType.getCanonicalText())
                 || Arrays.stream(psiType.getSuperTypes())
-                        .anyMatch(ele -> "java.lang.Number".equalsIgnoreCase(ele.getCanonicalText()));
+                .anyMatch(ele -> "java.lang.Number".equalsIgnoreCase(ele.getCanonicalText()));
     }
 
     public static boolean isStringType(PsiType psiType) {
@@ -187,6 +192,17 @@ public class CommonUtils {
         }
     }
 
+    // private static final String baseDir = "/home/patrick/tmp";
+    // private static final String sourceFile = "TestClass.java";
+
+    // public static void main(String[] args) throws IOException {
+    // PsiFileFactory psiFileFactory = createPsiFactory();
+    // File file = new File(baseDir, sourceFile);
+    // String javaSource = FileUtil.loadFile(file);
+    // FileASTNode node = parseJavaSource(javaSource, psiFileFactory);
+    //
+    // }
+
     /**
      * 判断字段是否是必须的
      *
@@ -214,17 +230,6 @@ public class CommonUtils {
         }
         return false;
     }
-
-    // private static final String baseDir = "/home/patrick/tmp";
-    // private static final String sourceFile = "TestClass.java";
-
-    // public static void main(String[] args) throws IOException {
-    // PsiFileFactory psiFileFactory = createPsiFactory();
-    // File file = new File(baseDir, sourceFile);
-    // String javaSource = FileUtil.loadFile(file);
-    // FileASTNode node = parseJavaSource(javaSource, psiFileFactory);
-    //
-    // }
 
     /**
      * 解析java文件
@@ -261,9 +266,6 @@ public class CommonUtils {
                 new JavaCoreApplicationEnvironment(getDisposable()));
         return environment.getProject();
     }
-
-    // 統一的 Disposable 實例，確保資源正確釋放
-    private static Disposable disposable;
 
     /**
      * 獲取或創建一個 Disposable 實例
@@ -515,7 +517,7 @@ public class CommonUtils {
 
     /**
      * 獲取全局設置
-     * 
+     *
      * @return 全局設置實例
      */
     public static JavaBeanToTypescriptInterfaceSettingsState getSettings() {
@@ -524,7 +526,7 @@ public class CommonUtils {
 
     /**
      * 根據類名查找 PsiType
-     * 
+     *
      * @param project   項目
      * @param className 類名
      * @return 對應的 PsiType，未找到時返回 null

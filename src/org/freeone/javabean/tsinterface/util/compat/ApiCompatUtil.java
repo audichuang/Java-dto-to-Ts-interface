@@ -12,7 +12,7 @@ public class ApiCompatUtil {
 
     /**
      * 檢查當前 IntelliJ 平台版本
-     * 
+     *
      * @return 平台的主要版本號
      */
     public static int getPlatformVersion() {

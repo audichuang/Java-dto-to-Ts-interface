@@ -134,7 +134,7 @@ public final class JavaBeanToTypescriptInterfaceSettingsState
 
     /**
      * 獲取項目級別的設定實例
-     * 
+     *
      * @param project 當前項目
      * @return 項目級別的設定狀態
      */
@@ -190,16 +190,16 @@ public final class JavaBeanToTypescriptInterfaceSettingsState
         return enableDataToString;
     }
 
+    public void setEnableDataToString(boolean enableDataToString) {
+        this.enableDataToString = enableDataToString;
+    }
+
     public boolean isUseAnnotationJsonProperty() {
         return useAnnotationJsonProperty;
     }
 
     public void setUseAnnotationJsonProperty(boolean useAnnotationJsonProperty) {
         this.useAnnotationJsonProperty = useAnnotationJsonProperty;
-    }
-
-    public void setEnableDataToString(boolean enableDataToString) {
-        this.enableDataToString = enableDataToString;
     }
 
     public boolean isAllowFindClassInAllScope() {

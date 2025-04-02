@@ -1,6 +1,5 @@
 package org.freeone.javabean.tsinterface.swing;
 
-import com.intellij.openapi.application.ApplicationManager;
 import com.intellij.openapi.ui.DialogWrapper;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -11,7 +10,6 @@ import java.awt.datatransfer.Clipboard;
 import java.awt.datatransfer.StringSelection;
 import java.awt.datatransfer.Transferable;
 import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
 
 public class TypescriptInterfaceShowerWrapper extends DialogWrapper {
 
@@ -161,7 +159,7 @@ public class TypescriptInterfaceShowerWrapper extends DialogWrapper {
         TypescriptInterfaceShowerWrapper.CustomerCloseAction customerCloseAction = new TypescriptInterfaceShowerWrapper.CustomerCloseAction(
                 this);
         customerCloseAction.putValue(DialogWrapper.DEFAULT_ACTION, true);
-        return new Action[] { customerCloseAction };
+        return new Action[]{customerCloseAction};
     }
 
     @Override
@@ -257,6 +255,61 @@ public class TypescriptInterfaceShowerWrapper extends DialogWrapper {
             System.err.println("清理資源時發生錯誤: " + e.getMessage());
             e.printStackTrace();
             super.dispose(); // 確保父類的 dispose 仍然被調用
+        }
+    }
+
+    // 添加內部類以處理對話框組件的資源釋放
+    public static class TypescriptInterfaceContentDisplayPanel {
+        private JPanel panel;
+        private JTextArea textArea;
+        private JScrollPane scrollPane;
+
+        public TypescriptInterfaceContentDisplayPanel() {
+            // 創建組件
+            panel = new JPanel(new BorderLayout());
+            textArea = new JTextArea();
+            textArea.setEditable(true);
+            textArea.setLineWrap(true);
+            textArea.setWrapStyleWord(true);
+            textArea.setFont(new Font(Font.MONOSPACED, Font.PLAIN, 14));
+
+            scrollPane = new JScrollPane(textArea);
+            scrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_ALWAYS);
+            panel.add(scrollPane, BorderLayout.CENTER);
+        }
+
+        public JPanel mainPanel() {
+            return panel;
+        }
+
+        public JTextArea getTextArea() {
+            return textArea;
+        }
+
+        public void setTextContent(String content) {
+            if (textArea != null && content != null) {
+                textArea.setText(content);
+                textArea.setCaretPosition(0);
+                System.out.println("使用 setTextContent 設置內容，長度: " + content.length());
+            }
+        }
+
+        public void dispose() {
+            // 釋放所有組件資源
+            if (textArea != null) {
+                textArea.setText(null); // 清除內容釋放記憶體
+                textArea = null;
+            }
+
+            if (scrollPane != null) {
+                scrollPane.removeAll();
+                scrollPane = null;
+            }
+
+            if (panel != null) {
+                panel.removeAll();
+                panel = null;
+            }
         }
     }
 
@@ -384,61 +437,6 @@ public class TypescriptInterfaceShowerWrapper extends DialogWrapper {
                     }
                 }
             }, com.intellij.openapi.application.ModalityState.defaultModalityState());
-        }
-    }
-
-    // 添加內部類以處理對話框組件的資源釋放
-    public static class TypescriptInterfaceContentDisplayPanel {
-        private JPanel panel;
-        private JTextArea textArea;
-        private JScrollPane scrollPane;
-
-        public TypescriptInterfaceContentDisplayPanel() {
-            // 創建組件
-            panel = new JPanel(new BorderLayout());
-            textArea = new JTextArea();
-            textArea.setEditable(true);
-            textArea.setLineWrap(true);
-            textArea.setWrapStyleWord(true);
-            textArea.setFont(new Font(Font.MONOSPACED, Font.PLAIN, 14));
-
-            scrollPane = new JScrollPane(textArea);
-            scrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_ALWAYS);
-            panel.add(scrollPane, BorderLayout.CENTER);
-        }
-
-        public JPanel mainPanel() {
-            return panel;
-        }
-
-        public JTextArea getTextArea() {
-            return textArea;
-        }
-
-        public void setTextContent(String content) {
-            if (textArea != null && content != null) {
-                textArea.setText(content);
-                textArea.setCaretPosition(0);
-                System.out.println("使用 setTextContent 設置內容，長度: " + content.length());
-            }
-        }
-
-        public void dispose() {
-            // 釋放所有組件資源
-            if (textArea != null) {
-                textArea.setText(null); // 清除內容釋放記憶體
-                textArea = null;
-            }
-
-            if (scrollPane != null) {
-                scrollPane.removeAll();
-                scrollPane = null;
-            }
-
-            if (panel != null) {
-                panel.removeAll();
-                panel = null;
-            }
         }
     }
 }

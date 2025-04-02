@@ -1,6 +1,9 @@
 package org.freeone.javabean.tsinterface.util;
 
-import com.intellij.psi.*;
+import com.intellij.psi.PsiAnnotation;
+import com.intellij.psi.PsiElement;
+import com.intellij.psi.PsiMethod;
+import com.intellij.psi.PsiNameValuePair;
 import com.intellij.psi.javadoc.PsiDocComment;
 import com.intellij.psi.javadoc.PsiDocTag;
 import org.apache.commons.lang3.StringUtils;
@@ -19,7 +22,7 @@ public class TransactionCodeExtractor {
 
     /**
      * 從控制器方法中提取電文代號
-     * 
+     *
      * @param method 控制器方法
      * @return 提取的電文代號，如果沒有找到則返回null
      */
@@ -112,7 +115,7 @@ public class TransactionCodeExtractor {
 
     /**
      * 根據電文代號和設置生成介面名稱
-     * 
+     *
      * @param originalName    原始Java類名
      * @param transactionCode 提取的電文代號
      * @param isRequest       是否為請求類

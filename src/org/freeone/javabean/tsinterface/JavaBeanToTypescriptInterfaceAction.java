@@ -18,15 +18,14 @@ import com.intellij.openapi.vfs.VirtualFile;
 import com.intellij.psi.*;
 import com.intellij.psi.impl.source.PsiExtensibleClass;
 import lombok.extern.slf4j.Slf4j;
+import org.freeone.javabean.tsinterface.service.DtoTypescriptGeneratorService;
+import org.freeone.javabean.tsinterface.setting.JavaBeanToTypescriptInterfaceProjectSettings;
 import org.freeone.javabean.tsinterface.swing.SampleDialogWrapper;
 import org.freeone.javabean.tsinterface.swing.TypescriptInterfaceShowerWrapper;
 import org.freeone.javabean.tsinterface.util.CommonUtils;
 import org.freeone.javabean.tsinterface.util.TypescriptContentGenerator;
-import org.freeone.javabean.tsinterface.service.DtoTypescriptGeneratorService;
-import org.freeone.javabean.tsinterface.setting.JavaBeanToTypescriptInterfaceProjectSettings;
 
 import javax.swing.*;
-import javax.swing.SwingUtilities;
 import java.awt.*;
 import java.awt.datatransfer.Clipboard;
 import java.awt.datatransfer.StringSelection;
@@ -343,7 +342,7 @@ public class JavaBeanToTypescriptInterfaceAction extends AnAction {
         // 使用正確的模態狀態顯示操作選項
         ApplicationManager.getApplication().invokeLater(() -> {
             try {
-                String[] options = { "保存到文件", "複製到剪貼板", "在文本框中編輯" };
+                String[] options = {"保存到文件", "複製到剪貼板", "在文本框中編輯"};
 
                 int choice = Messages.showDialog(
                         project,

@@ -1,8 +1,6 @@
 package org.freeone.javabean.tsinterface.marker;
 
-import com.intellij.codeInsight.daemon.GutterIconDescriptor;
 import com.intellij.codeInsight.daemon.LineMarkerInfo;
-import com.intellij.codeInsight.daemon.LineMarkerProvider;
 import com.intellij.codeInsight.daemon.LineMarkerProviderDescriptor;
 import com.intellij.openapi.editor.markup.GutterIconRenderer;
 import com.intellij.openapi.project.Project;
@@ -67,7 +65,7 @@ public class DtoTypeScriptInterfaceLineMarkerProvider extends LineMarkerProvider
 
     @Override
     public void collectSlowLineMarkers(@NotNull List<? extends PsiElement> elements,
-            @NotNull Collection<? super LineMarkerInfo<?>> result) {
+                                       @NotNull Collection<? super LineMarkerInfo<?>> result) {
         // 由於我們已經在 getLineMarkerInfo 中處理了標記，這裡不需要額外實現
     }
 
@@ -239,7 +237,7 @@ public class DtoTypeScriptInterfaceLineMarkerProvider extends LineMarkerProvider
             String methodName = method.getName();
             if ((methodName.startsWith("get") && methodName.length() > 3 && method.getParameterList().isEmpty())
                     || (methodName.startsWith("set") && methodName.length() > 3
-                            && method.getParameterList().getParametersCount() == 1)) {
+                    && method.getParameterList().getParametersCount() == 1)) {
                 getterSetterCount++;
             }
         }

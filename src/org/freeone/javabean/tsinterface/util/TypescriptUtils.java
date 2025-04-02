@@ -51,7 +51,7 @@ public class TypescriptUtils {
     }
 
     public static String generatorInterfaceContentForPsiClassElement(Project project, PsiClass psiClass,
-            boolean isDefault) {
+                                                                     boolean isDefault) {
         StringBuilder interfaceContent;
         // 保存到文件中就是需要default, 不然就不是
         try {
@@ -97,7 +97,7 @@ public class TypescriptUtils {
      * @return
      */
     public static String generatorInterfaceContentForPsiJavaFile(Project project, PsiJavaFile psiJavaFile,
-            boolean isSaveToFile) {
+                                                                 boolean isSaveToFile) {
         String interfaceContent;
         // 保存到文件中就是需要default, 不然就不是
         boolean isDefault = isSaveToFile;
@@ -140,7 +140,7 @@ public class TypescriptUtils {
      * @return
      */
     public static String generatorTypeContent(Project project, PsiJavaFile psiJavaFile, boolean isDefault,
-            int treeLevel) {
+                                              int treeLevel) {
         StringBuilder typeContent = new StringBuilder();
         String defaultText = "";
         if (isDefault) {
@@ -180,7 +180,7 @@ public class TypescriptUtils {
      * @return
      */
     public static String generatorInterfaceContentForPsiJavaFile(Project project, PsiJavaFile psiJavaFile,
-            boolean isDefault, int treeLevel) {
+                                                                 boolean isDefault, int treeLevel) {
         StringBuilder interfaceContent = new StringBuilder();
         String defaultText = "";
         if (isDefault) {
@@ -204,7 +204,7 @@ public class TypescriptUtils {
      * @return
      */
     public static String generatorInterfaceContentForPsiClass(Project project, PsiClass psiClassInParameters,
-            PsiClass targetPsiClass, boolean isDefault, int treeLevel) {
+                                                              PsiClass targetPsiClass, boolean isDefault, int treeLevel) {
         StringBuilder interfaceContent = new StringBuilder();
         String defaultText = "";
         if (isDefault) {
@@ -230,7 +230,7 @@ public class TypescriptUtils {
      * @param aClass
      */
     private static void doClassInterfaceContentForTypeScript(Project project, int treeLevel,
-            StringBuilder interfaceContent, String defaultText, PsiClass aClass) {
+                                                             StringBuilder interfaceContent, String defaultText, PsiClass aClass) {
         String classNameAsInterfaceName = aClass.getName();
         interfaceContent.append("export ").append(defaultText).append("interface ").append(classNameAsInterfaceName)
                 .append(" {\n");
@@ -346,7 +346,7 @@ public class TypescriptUtils {
     }
 
     private static void processMap(Project project, int treeLevel, StringBuilder interfaceContent, PsiField fieldItem,
-            String fieldSplitTag) {
+                                   String fieldSplitTag) {
         PsiType type = fieldItem.getType();
         String defaultKTYpe = "string";
         String defaultVType = "any";
@@ -403,7 +403,7 @@ public class TypescriptUtils {
     }
 
     private static void processOtherTypes(Project project, int treeLevel, StringBuilder interfaceContent,
-            PsiField fieldItem, String fieldSplitTag) {
+                                          PsiField fieldItem, String fieldSplitTag) {
 
         String canonicalText = CommonUtils.getJavaBeanTypeForNormalField(fieldItem);
         System.out.println("canonicalText = " + canonicalText);
@@ -481,7 +481,7 @@ public class TypescriptUtils {
      * @param fieldSplitTag
      */
     private static void processArray(Project project, int treeLevel, StringBuilder interfaceContent, PsiField fieldItem,
-            String fieldSplitTag) {
+                                     String fieldSplitTag) {
         // 泛型
         String generics = getFirstGenericsForArray(project, treeLevel + 1, interfaceContent, fieldItem);
         if (fieldSplitTag != null) {
@@ -501,7 +501,7 @@ public class TypescriptUtils {
      * @return
      */
     public static String getFirstGenericsForArray(Project project, int treeLevel, StringBuilder interfaceContent,
-            PsiField fieldItem) {
+                                                  PsiField fieldItem) {
         PsiField field = fieldItem;
         if (CommonUtils.isArrayType(field.getType())) {
             PsiType type = field.getType();

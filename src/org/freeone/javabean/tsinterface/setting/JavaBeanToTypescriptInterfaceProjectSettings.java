@@ -9,7 +9,6 @@ import com.intellij.util.xmlb.XmlSerializerUtil;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 
 /**
@@ -52,7 +51,7 @@ public final class JavaBeanToTypescriptInterfaceProjectSettings
 
     /**
      * 獲取項目級別的設定實例
-     * 
+     *
      * @param project 當前項目
      * @return 項目級別的設定狀態
      */
@@ -62,6 +61,21 @@ public final class JavaBeanToTypescriptInterfaceProjectSettings
         // 強制初始化後綴列表
         instance.initializeFromGlobalSettings();
         return instance;
+    }
+
+    /**
+     * 插件啟動時初始化設置
+     *
+     * @param project 當前項目
+     */
+    public static void initializeOnStartup(Project project) {
+        try {
+            JavaBeanToTypescriptInterfaceProjectSettings instance = getInstance(project);
+            instance.initializeFromGlobalSettings();
+            System.out.println("成功初始化項目 '" + project.getName() + "' 的設定");
+        } catch (Exception e) {
+            System.out.println("初始化項目設定時發生異常: " + e.getMessage());
+        }
     }
 
     @NotNull
@@ -77,7 +91,7 @@ public final class JavaBeanToTypescriptInterfaceProjectSettings
 
     /**
      * 獲取項目或全局的請求DTO後綴
-     * 
+     *
      * @return 請求DTO後綴列表
      */
     public List<String> getEffectiveRequestDtoSuffixes() {
@@ -89,7 +103,7 @@ public final class JavaBeanToTypescriptInterfaceProjectSettings
 
     /**
      * 獲取項目或全局的響應DTO後綴
-     * 
+     *
      * @return 響應DTO後綴列表
      */
     public List<String> getEffectiveResponseDtoSuffixes() {
@@ -121,7 +135,7 @@ public final class JavaBeanToTypescriptInterfaceProjectSettings
 
     /**
      * 獲取項目或全局的允許在全局範圍內查找類的設定
-     * 
+     *
      * @return 是否允許在全局範圍內查找類
      */
     public boolean isAllowFindClassInAllScope() {
@@ -129,20 +143,5 @@ public final class JavaBeanToTypescriptInterfaceProjectSettings
             return JavaBeanToTypescriptInterfaceSettingsState.getInstance().isAllowFindClassInAllScope();
         }
         return false; // 項目級別默認不允許
-    }
-
-    /**
-     * 插件啟動時初始化設置
-     * 
-     * @param project 當前項目
-     */
-    public static void initializeOnStartup(Project project) {
-        try {
-            JavaBeanToTypescriptInterfaceProjectSettings instance = getInstance(project);
-            instance.initializeFromGlobalSettings();
-            System.out.println("成功初始化項目 '" + project.getName() + "' 的設定");
-        } catch (Exception e) {
-            System.out.println("初始化項目設定時發生異常: " + e.getMessage());
-        }
     }
 }

@@ -90,7 +90,7 @@ public class TypescriptContentGenerator {
      * 處理Java類並生成TypeScript介面
      *
      * @param selectedClass 選中的類
-     * @param needDefault 是否需要默認值
+     * @param needDefault   是否需要默認值
      */
     public void processPsiClass(PsiClass selectedClass, boolean needDefault) {
         // 重置狀態
@@ -104,7 +104,7 @@ public class TypescriptContentGenerator {
      * 生成最終合併的TypeScript內容
      *
      * @param selectedClass 選中的類
-     * @param needDefault 是否需要默認值
+     * @param needDefault   是否需要默認值
      * @return 合併後的TypeScript內容
      */
     public String mergeContent(PsiClass selectedClass, boolean needDefault) {
