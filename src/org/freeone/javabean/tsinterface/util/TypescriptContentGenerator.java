@@ -1189,48 +1189,6 @@ public class TypescriptContentGenerator {
                             !typeName.equals("any") &&
                             !typeName.equals("unknown") &&
                             !typeName.startsWith(transactionCodePrefix)) {
-
-                        // // 直接處理常見的嵌套類名稱模式
-                        // if (typeName.contains("QryStatement") ||
-                        // typeName.contains("Tranrq") ||
-                        // typeName.contains("Tranrs")) {
-                        //
-                        // // 生成新的類型名稱
-                        // String newTypeName = transactionCodePrefix;
-                        //
-                        // // 添加請求/響應後綴
-                        // newTypeName += isRequest ? "Req" : "Resp";
-                        //
-                        // // 如果沒有特定後綴，嘗試提取類名中的唯一部分
-                        // String originalName = typeName;
-                        // int lastDotIndex = originalName.lastIndexOf('.');
-                        // if (lastDotIndex > 0) {
-                        // originalName = originalName.substring(lastDotIndex + 1);
-                        // }
-                        //
-                        // // // 移除已知的前綴和後綴
-                        // // String uniquePart = originalName
-                        // // .replace("QryStatement", "")
-                        // // .replace("Tranrq", "")
-                        // // .replace("Tranrs", "")
-                        // // .replace("Request", "")
-                        // // .replace("Response", "")
-                        // // .replace("Req", "")
-                        // // .replace("Resp", "");
-                        // //
-                        // // // 如果提取後還有內容，添加到新名稱中
-                        // // if (!uniquePart.isEmpty()) {
-                        // // newTypeName += uniquePart;
-                        // // }
-                        //
-                        // // 更新類型名稱映射
-                        // typeNameMap.put(entry.getKey(), newTypeName);
-                        //
-                        // // 同時更新全局類名映射，以便其他地方引用時能夠一致
-                        // CLASS_NAME_WITH_PACKAGE_2_TS_INTERFACE_NAME.put(typeName, newTypeName);
-                        //
-                        // System.out.println("更新嵌套類型名稱: " + typeName + " -> " + newTypeName);
-                        // }
                     }
                 }
             }
