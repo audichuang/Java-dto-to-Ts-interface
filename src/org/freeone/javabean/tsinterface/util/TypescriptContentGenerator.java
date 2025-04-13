@@ -53,11 +53,6 @@ public class TypescriptContentGenerator {
     private final Map<String, String> classContentMap = new HashMap<>();
 
     /**
-     * 電文代號緩存
-     */
-    private final Map<String, String> transactionCodeMap = new HashMap<>();
-
-    /**
      * 類名到TypeScript介面名稱的映射
      */
     private final Map<String, String> tsInterfaceNameMap = new HashMap<>();
@@ -78,10 +73,18 @@ public class TypescriptContentGenerator {
     private final Project project;
 
     /**
+     * 電文代號
+     */
+    private String transactionCode;
+
+    /**
      * 構造器
      */
-    public TypescriptContentGenerator(Project project) {
+    public TypescriptContentGenerator(Project project, String transactionCode) {
         this.project = project;
+        if (StringUtils.isNotBlank(transactionCode)) {
+            this.transactionCode = transactionCode;
+        }
     }
 
     // ==================== 公共接口方法 ====================
@@ -174,7 +177,6 @@ public class TypescriptContentGenerator {
         classContentMap.clear();
         processEntryList.clear();
         tsInterfaceNameMap.clear();
-        transactionCodeMap.clear();
         classCommentMap.clear();
         classReferences.clear();
         referencedByMap.clear();
@@ -767,33 +769,13 @@ public class TypescriptContentGenerator {
             return processNestedClassName(qualifiedName, originalName, psiClass);
         }
 
-        // 檢查是否已經緩存了電文代號
-        if (transactionCodeMap.containsKey(qualifiedName)) {
-            String transactionCode = transactionCodeMap.get(qualifiedName);
+        // 如果有電文代號就以電文代號命名，否則返回原名稱
+        if (StringUtils.isNotBlank(transactionCode)) {
             ClassUsageInfo usageInfo = analyzeClassUsage(psiClass);
             return TransactionCodeExtractor.generateInterfaceName(originalName, transactionCode, usageInfo.isRequest);
+        } else {
+            return originalName;
         }
-
-        // 從類的方法使用處查找控制器方法
-        PsiReference[] references = findReferences(psiClass);
-        ClassUsageInfo usageInfo = analyzeClassUsage(psiClass);
-
-        for (PsiReference reference : references) {
-            PsiElement element = reference.getElement();
-            PsiMethod method = findEnclosingMethod(element);
-            if (method != null) {
-                // 提取電文代號
-                String transactionCode = TransactionCodeExtractor.extractTransactionCode(method);
-                if (transactionCode != null && !transactionCode.isEmpty()) {
-                    // 緩存電文代號
-                    transactionCodeMap.put(qualifiedName, transactionCode);
-                    return TransactionCodeExtractor.generateInterfaceName(originalName, transactionCode, usageInfo.isRequest);
-                }
-            }
-        }
-
-        // 未找到電文代號，返回原名稱
-        return originalName;
     }
 
     /**

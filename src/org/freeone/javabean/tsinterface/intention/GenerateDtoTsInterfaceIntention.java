@@ -19,6 +19,7 @@ import org.freeone.javabean.tsinterface.service.DtoTypescriptGeneratorService;
 import org.freeone.javabean.tsinterface.setting.JavaBeanToTypescriptInterfaceProjectSettings;
 import org.freeone.javabean.tsinterface.swing.TypescriptInterfaceShowerWrapper;
 import org.freeone.javabean.tsinterface.util.CommonUtils;
+import org.freeone.javabean.tsinterface.util.TransactionCodeExtractor;
 import org.freeone.javabean.tsinterface.util.TypescriptContentGenerator;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -52,6 +53,8 @@ public class GenerateDtoTsInterfaceIntention extends PsiElementBaseIntentionActi
             if (method == null) {
                 return;
             }
+            String transactionCode = CommonUtils.getSettings().isUseTransactionCodePrefix() ?
+                    TransactionCodeExtractor.extractTransactionCode(method) : null;
 
             // 收集所有需要處理的 DTO 類
             List<PsiClass> dtoClasses = collectDtoClasses(method);
@@ -66,7 +69,7 @@ public class GenerateDtoTsInterfaceIntention extends PsiElementBaseIntentionActi
             for (PsiClass psiClass : dtoClasses) {
                 try {
                     // 創建 TypescriptContentGenerator 實例
-                    TypescriptContentGenerator generator = new TypescriptContentGenerator(project);
+                    TypescriptContentGenerator generator = new TypescriptContentGenerator(project, transactionCode);
                     generator.processPsiClass(psiClass, false);
                     String content = generator.mergeContent(psiClass, false);
                     contentMap.put(psiClass.getName(), content);
@@ -107,7 +110,7 @@ public class GenerateDtoTsInterfaceIntention extends PsiElementBaseIntentionActi
                                                 } else if (selectedValue.equals("在文本框中編輯")) {
                                                     // 使用帶有類名支持的顯示方法
                                                     DtoTypescriptGeneratorService.showInTextEditor(project,
-                                                            finalContentMap);
+                                                            finalContentMap, transactionCode);
                                                 }
                                             } catch (Exception e) {
                                                 // 捕獲並記錄任何執行操作時的錯誤

@@ -9,13 +9,11 @@ import com.intellij.openapi.application.ReadAction;
 import com.intellij.openapi.fileChooser.FileChooser;
 import com.intellij.openapi.fileChooser.FileChooserDescriptor;
 import com.intellij.openapi.project.Project;
-import com.intellij.openapi.ui.Messages;
 import com.intellij.openapi.vfs.VirtualFile;
 import com.intellij.psi.*;
 import org.freeone.javabean.tsinterface.setting.JavaBeanToTypescriptInterfaceProjectSettings;
 import org.freeone.javabean.tsinterface.swing.TypescriptInterfaceShowerWrapper;
 import org.freeone.javabean.tsinterface.util.CommonUtils;
-import org.freeone.javabean.tsinterface.util.TypescriptContentGenerator;
 
 import java.awt.*;
 import java.awt.datatransfer.Clipboard;
@@ -27,7 +25,6 @@ import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -39,86 +36,6 @@ public class DtoTypescriptGeneratorService {
     // 使用 NotificationGroupManager 獲取通知組
     private static final NotificationGroup notificationGroup = NotificationGroupManager.getInstance()
             .getNotificationGroup("JavaDtoToTypescriptInterface");
-
-    /**
-     * 為多個 DTO 類生成 TypeScript 接口
-     *
-     * @param project    當前項目
-     * @param dtoClasses 要處理的 DTO 類列表
-     * @param saveToFile 是否保存到文件
-     */
-    public static void generateTypescriptInterfaces(Project project, List<PsiClass> dtoClasses, boolean saveToFile) {
-        if (dtoClasses == null || dtoClasses.isEmpty()) {
-            return;
-        }
-
-        // 生成接口内容
-        Map<String, String> contentMap = new HashMap<>();
-        for (PsiClass psiClass : dtoClasses) {
-            try {
-                // 創建 TypescriptContentGenerator 實例
-                TypescriptContentGenerator generator = new TypescriptContentGenerator(project);
-                generator.processPsiClass(psiClass, saveToFile);
-                String content = generator.mergeContent(psiClass, saveToFile);
-                contentMap.put(psiClass.getName(), content);
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-        }
-
-        if (contentMap.isEmpty()) {
-            Messages.showMessageDialog(project, "沒有生成任何內容", "警告", Messages.getWarningIcon());
-            return;
-        }
-
-        // 根據選項處理生成的內容
-        if (saveToFile) {
-            saveToFiles(project, contentMap);
-        } else {
-            // 預設複製到剪貼板
-            copyToClipboard(project, contentMap);
-        }
-    }
-
-    /**
-     * 顯示操作選項對話框
-     */
-    public static void showOptionsDialog(Project project, List<PsiClass> dtoClasses) {
-        if (dtoClasses == null || dtoClasses.isEmpty()) {
-            return;
-        }
-
-        // 生成接口内容
-        Map<String, String> contentMap = new HashMap<>();
-        for (PsiClass psiClass : dtoClasses) {
-            try {
-                // 創建 TypescriptContentGenerator 實例
-                TypescriptContentGenerator generator = new TypescriptContentGenerator(project);
-                generator.processPsiClass(psiClass, false);
-                String content = generator.mergeContent(psiClass, false);
-                contentMap.put(psiClass.getName(), content);
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-        }
-
-        if (contentMap.isEmpty()) {
-            Messages.showMessageDialog(project, "沒有生成任何內容", "警告", Messages.getWarningIcon());
-            return;
-        }
-
-        // 顯示選項對話框
-        String[] options = {"保存到文件", "複製到剪貼板", "在文本框中編輯"};
-        int choice = Messages.showDialog(project, "請選擇操作", "TypeScript 接口生成", options, 0, Messages.getQuestionIcon());
-
-        if (choice == 0) {
-            saveToFiles(project, contentMap);
-        } else if (choice == 1) {
-            copyToClipboard(project, contentMap);
-        } else if (choice == 2) {
-            showInTextEditor(project, contentMap);
-        }
-    }
 
     /**
      * 保存生成的 TypeScript 接口到文件
@@ -207,7 +124,7 @@ public class DtoTypescriptGeneratorService {
     /**
      * 在文本編輯器中顯示生成的內容
      */
-    public static void showInTextEditor(Project project, Map<String, String> contentMap) {
+    public static void showInTextEditor(Project project, Map<String, String> contentMap, String transactionCode) {
         if (contentMap.isEmpty()) {
             return;
         }
@@ -232,10 +149,8 @@ public class DtoTypescriptGeneratorService {
                 TypescriptInterfaceShowerWrapper wrapper = new TypescriptInterfaceShowerWrapper();
                 wrapper.setContent(combinedContent.toString());
 
-                // 設置類名以生成建議檔名
-                if (classNamesBuilder.length() > 0) {
-                    wrapper.setClassName(classNamesBuilder.toString());
-                }
+                // 設置類名，如果使用電文代號則使用電文代號，否則使用默認名稱
+                wrapper.setClassName(CommonUtils.getSettings().isUseTransactionCodePrefix() ? transactionCode : "typescript-interface");
 
                 // 顯示對話框
                 wrapper.show();
